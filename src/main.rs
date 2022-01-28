@@ -1,29 +1,22 @@
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server};
-use std::convert::Infallible;
-use std::net::SocketAddr;
+use actix_web::{App, HttpServer};
+use web3::types::Address;
 
-async fn hello_world(_req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new("Hello, World".into()))
+mod api;
+
+async fn start_server(address: Address, account: Address, i: usize) -> std::io::Result<()> {
+    HttpServer::new(move || {
+        App::new()
+            .app_data((address, account))
+            .service(api::index)
+            .service(api::inc)
+            .service(api::dec)
+    })
+    .bind(format!("127.0.0.1:{}", 8080 + i))?
+    .run()
+    .await
 }
 
-async fn start_server(i: u16) {
-    // We'll bind to 127.0.0.1:3000
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000 + i));
-
-    // A `Service` is needed for every connection, so this
-    // creates one from our `hello_world` function.
-    let make_svc = make_service_fn(|_conn| async {
-        // service_fn converts our function into a `Service`
-        Ok::<_, Infallible>(service_fn(hello_world))
-    });
-
-    let server = Server::bind(&addr).serve(make_svc);
-
-    server.await.unwrap();
-}
-
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> web3::contract::Result<()> {
     // Make the "Counter" an argument
     let _ = env_logger::try_init();
@@ -51,18 +44,12 @@ async fn main() -> web3::contract::Result<()> {
             .execute(bytecode, (), owner)
             .await?;
 
-    let contract = web3::contract::Contract::from_json(
-        web3.eth(),
-        contract.address(),
-        include_bytes!("../build/Counter.abi"),
-    )?;
-
     let mut i = 0;
 
     let mut servers = vec![];
 
     while i < 5 {
-        servers.push(start_server(i));
+        servers.push(start_server(contract.address(), accounts[i], i));
 
         i += 1;
     }
