@@ -1,6 +1,4 @@
-build:
-	solc --optimize-runs 1 --bin --abi -o build ./contracts/* --overwrite
-
-deploy:
-	cd deployer && cargo run
-
+prepare:
+	mkcert localhost
+	cp .env.local .env
+	cp .env.local .env.docker

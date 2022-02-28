@@ -1,19 +1,33 @@
 [package]
-name = "deployer"
+name = "simple-syrup"
 version = "0.1.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = { version = "4.0.0-beta.21" }
+actix-web = { version = "4.0.0-beta.21", features = ["openssl"] }
+actix-cors = "0.6.0-beta.10"
+async-trait = "0.1.52"
+derive = { path = "derive" }
 dotenv = "0.15.0"
 env_logger = "0.9.0"
 fork = "0.1.18"
 futures = "0.3.19"
 hex-literal = "0.3.4"
 hyper = { version = "0.14", features = ["full"] }
+openssl = "0.10.38"
+sendgrid = {version = "0.17.4", features = ["async"]}
 serde = "1.0.136"
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+sqlx = {version = "0.5.10", features = [ "runtime-tokio-rustls", "postgres", "macros", "json", "offline" ]}
 tokio = "1.15.0"
 tokio-core = "0.1.18"
-web3 = "0.17.0"
+totp-rs = "0.7.3"
+itertools = "0.10.3"
+
+
+[workspace]
+members = [
+    "derive"
+]

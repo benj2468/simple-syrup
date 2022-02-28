@@ -1,0 +1,188 @@
+{
+  "db": "PostgreSQL",
+  "00c78132107bc1b10497a2a740d0d7d95f238c9590577ba23437fdf3ff30be65": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          "Varchar",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          }
+        ]
+      }
+    },
+    "query": "INSERT INTO authenticated (data, secret_component, status) VALUES ($1, $2, $3) ON CONFLICT (data) DO UPDATE SET secret_component = EXCLUDED.secret_component;"
+  },
+  "1f91ba04f34ebad8aee8cab44974750ef3fe0e79bf8f0bdaaa40fbbd051a0d31": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          }
+        ]
+      }
+    },
+    "query": "UPDATE authenticated SET status=$2 WHERE data=$1 AND status=$3;"
+  },
+  "8c70bebb93af4eeaef511d1034b6024e2b84a9ec23612b5e709c1797be5e9109": {
+    "describe": {
+      "columns": [
+        {
+          "name": "data",
+          "ordinal": 0,
+          "type_info": "Jsonb"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          }
+        ]
+      }
+    },
+    "query": "SELECT data FROM authenticated WHERE data=$1 AND status=$2;"
+  },
+  "93b97be0cdc82775691042a20a077bd073636407c767fd943d327367a12a2423": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          }
+        ]
+      }
+    },
+    "query": "UPDATE authenticated SET status=$2 WHERE data=$1 AND status=$3 OR status=$4;"
+  },
+  "daa16f40c715ff79947487a67e507981c90d5f4b6a092e9679c9b25d8a475b94": {
+    "describe": {
+      "columns": [
+        {
+          "name": "secret_component",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          }
+        ]
+      }
+    },
+    "query": "UPDATE authenticated SET status=$2 WHERE data=$1 AND status=$3 RETURNING secret_component;"
+  }
+}
