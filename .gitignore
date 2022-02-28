@@ -16,5 +16,3 @@ Cargo.lock
 
 # Environment Variables
 .env
-
-*.pem
