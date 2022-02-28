@@ -108,7 +108,9 @@ async fn root_server(root: &Config) -> std::io::Result<()> {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
-    dotenv::dotenv().expect("Cannot initiate server without env variables.");
+    if cfg!(debug_assertions) {
+        dotenv::dotenv().expect("Cannot initiate server without env variables.");
+    }
 
     let config = config::Config::new().await;
 
