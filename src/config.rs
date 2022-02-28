@@ -51,8 +51,8 @@ impl Config {
         let config_servers: Vec<ConfigServer> =
             serde_json::from_str(&config_servers).expect("Invalid Servers Config");
 
-        let root_port: u32 = std::env::var("ROOT_PORT")
-            .expect("Must supply ROOT_PORT")
+        let root_port: u32 = std::env::var("PORT")
+            .expect("Must supply PORT")
             .parse()
             .expect("Expected a positive integer for the Root Port");
 
