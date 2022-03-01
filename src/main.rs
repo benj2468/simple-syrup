@@ -94,7 +94,7 @@ async fn root_server(root: Config) -> std::io::Result<()> {
 
         app
     })
-    .bind(format!("{}:{}", host, port))?
+    .bind(format!("0.0.0.0:{}", port))?
     .run()
     .await
 }
