@@ -21,15 +21,9 @@ pub struct ConfigServer {
 }
 
 #[derive(Clone)]
-pub struct SSLData {
-    pub(crate) ssl_cert_file: String,
-    pub(crate) ssl_key_file: String,
-}
-
-#[derive(Clone)]
 pub(crate) struct Server {
     pub(crate) host: String,
-    pub(crate) dev_port: u32,
+    pub(crate) _dev_port: u32,
     pub(crate) database: PgPool,
     pub(crate) server_ty: ServerType,
 }
@@ -37,7 +31,6 @@ pub(crate) struct Server {
 #[derive(Clone)]
 pub struct Config {
     pub(crate) servers: Vec<Server>,
-    pub(crate) ssl_data: SSLData,
     pub(crate) host: String,
     pub(crate) port: u32,
 }
@@ -66,14 +59,6 @@ impl Config {
         .collect::<sqlx::Result<Vec<PgPool>>>()
         .expect("Unable to connect to some Databases on load");
 
-        let ssl_cert_file = std::env::var("SSL_CERT_FILE").expect("Must supply SSL_CERT_FILE");
-        let ssl_key_file = std::env::var("SSL_KEY_FILE").expect("Must supply SSL_KEY_FILE");
-
-        let ssl_data = SSLData {
-            ssl_cert_file,
-            ssl_key_file,
-        };
-
         let servers: Vec<Server> = config_servers
             .iter()
             .zip(dbs)
@@ -81,14 +66,13 @@ impl Config {
                 database,
                 host: host.clone(),
                 server_ty: config.server_ty,
-                dev_port: port.clone(),
+                _dev_port: port,
             })
             .collect();
 
         Config {
             host,
             servers,
-            ssl_data,
             port,
         }
     }

@@ -1,10 +1,9 @@
-use crate::config::{SSLData, Server, ServerPublicData};
+use crate::config::{Server, ServerPublicData};
 use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
 use config::Config;
 use env_logger::Env;
 use futures::future::join_all;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use sqlx::migrate::MigrateError;
 mod api;
 mod config;
@@ -28,22 +27,10 @@ async fn root_server(root: Config) -> std::io::Result<()> {
     let Config {
         host,
         port,
-        ssl_data,
         servers,
     } = root;
 
-    let SSLData {
-        ssl_cert_file,
-        ssl_key_file,
-    } = ssl_data;
-
     println!("[root]: {}:{}", host, port);
-
-    let mut builder = SslAcceptor::mozilla_intermediate_v5(SslMethod::tls_server())?;
-    builder
-        .set_private_key_file(&ssl_key_file, SslFiletype::PEM)
-        .unwrap();
-    builder.set_certificate_chain_file(&ssl_cert_file).unwrap();
 
     let servers_pub: Vec<ServerPublicData> = servers
         .clone()
