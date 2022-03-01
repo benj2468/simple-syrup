@@ -1,7 +1,6 @@
 use crate::db;
 use actix_web::{HttpRequest, HttpResponseBuilder, Responder};
 use hyper::StatusCode;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
@@ -17,7 +16,6 @@ pub struct DBOptions {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ConfigServer {
-    pub(crate) port: u32,
     pub(crate) server_ty: ServerType,
     pub(crate) db_options: DBOptions,
 }
@@ -31,6 +29,7 @@ pub struct SSLData {
 #[derive(Clone)]
 pub(crate) struct Server {
     pub(crate) host: String,
+    pub(crate) dev_port: u32,
     pub(crate) database: PgPool,
     pub(crate) server_ty: ServerType,
 }
@@ -56,15 +55,6 @@ impl Config {
 
         let host: String = std::env::var("HOST").expect("Must supply HOST");
 
-        assert!(
-            config_servers
-                .iter()
-                .map(|s| s.port)
-                .chain(vec![port].into_iter())
-                .all_unique(),
-            "MUST PROVIDE ALL UNIQUE PORTS"
-        );
-
         let dbs = futures::future::join_all(
             config_servers
                 .iter()
@@ -89,8 +79,9 @@ impl Config {
             .zip(dbs)
             .map(|(config, database)| Server {
                 database,
-                host: format!("https://{}:{}", host.clone(), port.clone()),
+                host: host.clone(),
                 server_ty: config.server_ty,
+                dev_port: port.clone(),
             })
             .collect();
 
@@ -115,7 +106,7 @@ impl ServerPublicData {
             server_ty, host, ..
         } = server;
         let name = format!("{:?}{}", server_ty, i).to_lowercase();
-        let url = format!("{}/{}/", host, name);
+        let url = format!("https://{}/{}/", host, name);
         println!("[{:?}]: {}", server_ty, url);
         ServerPublicData {
             url,
