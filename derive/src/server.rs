@@ -173,7 +173,7 @@ pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
                 .await
                 .map(|row| row.try_get("status").unwrap())
                 .map(|s: VerificationStatus| actix_web::HttpResponseBuilder::new(StatusCode::OK).json(s))
-                .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
+                .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
         }
     }
 }
