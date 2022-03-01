@@ -30,9 +30,7 @@ pub struct SSLData {
 
 #[derive(Clone)]
 pub(crate) struct Server {
-    pub(crate) ssl_data: SSLData,
     pub(crate) host: String,
-    pub(crate) port: u32,
     pub(crate) database: PgPool,
     pub(crate) server_ty: ServerType,
 }
@@ -51,7 +49,7 @@ impl Config {
         let config_servers: Vec<ConfigServer> =
             serde_json::from_str(&config_servers).expect("Invalid Servers Config");
 
-        let root_port: u32 = std::env::var("PORT")
+        let port: u32 = std::env::var("PORT")
             .expect("Must supply PORT")
             .parse()
             .expect("Expected a positive integer for the Root Port");
@@ -62,7 +60,7 @@ impl Config {
             config_servers
                 .iter()
                 .map(|s| s.port)
-                .chain(vec![root_port].into_iter())
+                .chain(vec![port].into_iter())
                 .all_unique(),
             "MUST PROVIDE ALL UNIQUE PORTS"
         );
@@ -91,10 +89,8 @@ impl Config {
             .zip(dbs)
             .map(|(config, database)| Server {
                 database,
-                host: host.clone(),
+                host: format!("https://{}:{}", host.clone(), port.clone()),
                 server_ty: config.server_ty,
-                port: config.port,
-                ssl_data: ssl_data.clone(),
             })
             .collect();
 
@@ -102,7 +98,7 @@ impl Config {
             host,
             servers,
             ssl_data,
-            port: root_port,
+            port,
         }
     }
 }
@@ -113,11 +109,17 @@ pub struct ServerPublicData {
     server_ty: ServerType,
 }
 
-impl From<&Server> for ServerPublicData {
-    fn from(server: &Server) -> Self {
+impl ServerPublicData {
+    pub(crate) fn new(i: usize, server: &Server) -> Self {
+        let Server {
+            server_ty, host, ..
+        } = server;
+        let name = format!("{:?}{}", server_ty, i).to_lowercase();
+        let url = format!("{}/{}/", host, name);
+        println!("[{:?}]: {}", server_ty, url);
         ServerPublicData {
-            url: format!("https://{}:{}", server.host, server.port),
-            server_ty: server.server_ty,
+            url,
+            server_ty: *server_ty,
         }
     }
 }
