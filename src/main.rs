@@ -60,7 +60,7 @@ async fn start_server(server: Server) -> std::io::Result<()> {
             config::ServerType::Email => start_server!(app, email, database),
         }
     })
-    .bind_openssl(format!("{}:{}", host, port), builder)?
+    .bind(format!("{}:{}", host, port))?
     .run()
     .await
 }
@@ -100,7 +100,7 @@ async fn root_server(root: &Config) -> std::io::Result<()> {
             .app_data(servers.clone())
             .service(config::root)
     })
-    .bind_openssl(format!("{}:{}", host, port), builder)?
+    .bind(format!("{}:{}", host, port))?
     .run()
     .await
 }
