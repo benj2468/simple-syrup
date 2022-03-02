@@ -1,11 +1,13 @@
-use crate::config::{Server, ServerPublicData};
 use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
-use config::Config;
+use actix_web_httpauth::middleware::HttpAuthentication;
+use config::{Config, Server, ServerPublicData};
 use env_logger::Env;
 use futures::future::join_all;
 use sqlx::migrate::MigrateError;
+
 mod api;
+mod auth;
 mod config;
 mod db;
 
@@ -57,7 +59,10 @@ async fn root_server(root: Config) -> std::io::Result<()> {
             .allow_any_origin()
             .allow_any_method();
 
+        let auth_middleware = HttpAuthentication::bearer(auth::validator);
+
         let mut app = App::new()
+            .wrap(auth_middleware)
             .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(servers_pub.clone())
