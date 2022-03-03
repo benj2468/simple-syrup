@@ -62,7 +62,8 @@ async fn root_server(root: Config) -> std::io::Result<()> {
         let auth_middleware = HttpAuthentication::bearer(auth::validator);
 
         let mut app = App::new()
-            .wrap(auth_middleware)
+            // Reset this when we are ready to implement JWT requirements
+            // .wrap(auth_middleware)
             .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(servers_pub.clone())
