@@ -41,6 +41,18 @@ impl Config {
         let config_servers: Vec<ConfigServer> =
             serde_json::from_str(&config_servers).expect("Invalid Servers Config");
 
+        let server_id: usize = std::env::var("SERVER_ID")
+            .expect("Must supply a SERVER_ID")
+            .parse()
+            .expect("SERVER_ID must be an integer");
+
+        let server: ConfigServer = config_servers
+            .get(server_id)
+            .expect("Invalid SERVER_ID for server data")
+            .clone();
+
+        let servers = vec![server];
+
         let port: u32 = std::env::var("PORT")
             .expect("Must supply PORT")
             .parse()
@@ -48,18 +60,14 @@ impl Config {
 
         let host: String = std::env::var("HOST").expect("Must supply HOST");
 
-        let dbs = futures::future::join_all(
-            config_servers
-                .iter()
-                .map(|s| &s.db_options)
-                .map(db::new_pool),
-        )
-        .await
-        .into_iter()
-        .collect::<sqlx::Result<Vec<PgPool>>>()
-        .expect("Unable to connect to some Databases on load");
+        let dbs =
+            futures::future::join_all(servers.iter().map(|s| &s.db_options).map(db::new_pool))
+                .await
+                .into_iter()
+                .collect::<sqlx::Result<Vec<PgPool>>>()
+                .expect("Unable to connect to some Databases on load");
 
-        let servers: Vec<Server> = config_servers
+        let servers: Vec<Server> = servers
             .iter()
             .zip(dbs)
             .map(|(config, database)| Server {
