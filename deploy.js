@@ -65,12 +65,6 @@ const main = async () => {
         })()
     }))
 
-    for(const {name} of apps) {
-        console.log(`Pushing ${name} ...`)
-        await exec(`git push https://git.heroku.com/${name}.git HEAD:main --force`)
-        console.log(`Completed ${name} ✅`)
-    }
-
     console.log("Completed ✅")
 }
 
