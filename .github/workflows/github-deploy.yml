@@ -24,4 +24,19 @@ jobs:
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
+    - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: "cpass0"
+          heroku_email: "benjcape@gmail.com" 
+    - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: "cpass1"
+          heroku_email: "benjcape@gmail.com" 
+    - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: "cpass2"
+          heroku_email: "benjcape@gmail.com" 
       
