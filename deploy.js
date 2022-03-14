@@ -51,6 +51,7 @@ const setEnvs = async ({name, ty}) => {
                 throw Error("Unimplemented")
         } 
     })
+    .then(console.log)
     .catch(console.log)
 }
 
@@ -62,7 +63,9 @@ const main = async () => {
             } catch (e) {
                 console.log(`Did not create a new app: ${server.name}, Maybe it already existed`)
             } finally {
+                console.log('here')
                 await setEnvs(server)
+                console.log('after...')
             }
             
         })()
