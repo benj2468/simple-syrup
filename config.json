@@ -1,0 +1,16 @@
+{
+    "apps": [
+        {
+            "name": "cpass0",
+            "ty": "Email"
+        },
+        {
+            "name": "cpass1",
+            "ty": "Email"
+        },
+        {
+            "name": "cpass2",
+            "ty": "Email"
+        }
+    ]
+}

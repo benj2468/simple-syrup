@@ -10,5 +10,4 @@ build:
 	DATABASE_URL=postgres://localhost:5432/cpass cargo build
 
 deploy:
-	SERVER_COUNT=2 node predeploy.js
-	git push heroku multi:main
+	node deploy.js
