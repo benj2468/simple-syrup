@@ -1,20 +1,17 @@
 use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
-use config::{Config, Server, ServerPublicData};
+use config::{Config, Server};
 use env_logger::Env;
-use futures::future::join_all;
-use sqlx::migrate::MigrateError;
 
 mod api;
 mod auth;
 mod config;
 mod db;
 
-macro_rules! build_scope {
-    ($name:ident, $mod:ident, $pool:ident) => {
-        actix_web::Scope::new(&$name)
-            .app_data(api::$mod::server_builder($pool.clone()))
+macro_rules! build_app {
+    ($app:ident, $mod:ident, $pool:ident) => {
+        $app.app_data(api::$mod::server_builder($pool.clone()))
             .service(api::index)
             .service(api::$mod::server_ty)
             .service(api::$mod::register)
@@ -29,29 +26,24 @@ async fn root_server(root: Config) -> std::io::Result<()> {
     let Config {
         host,
         port,
-        servers,
+        server,
+        active_servers,
     } = root;
 
     println!("[root]: {}:{}", host, port);
 
-    let servers_pub: Vec<ServerPublicData> = servers
-        .clone()
-        .iter()
-        .enumerate()
-        .map(|(i, x)| ServerPublicData::new(i, x))
-        .collect();
-
-    join_all(
-        servers
-            .iter()
-            .map(|server| sqlx::migrate!().run(&server.database)),
-    )
-    .await
-    .into_iter()
-    .collect::<Result<Vec<()>, MigrateError>>()
-    .expect("Could not perform db migrations");
+    sqlx::migrate!()
+        .run(&server.database)
+        .await
+        .expect("Could not perform db migrations");
 
     let _host = host.clone();
+
+    let Server {
+        database,
+        server_ty,
+        ..
+    } = server;
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -61,31 +53,17 @@ async fn root_server(root: Config) -> std::io::Result<()> {
 
         let auth_middleware = HttpAuthentication::bearer(auth::validator);
 
-        let mut app = App::new()
+        let app = App::new()
             // Reset this when we are ready to implement JWT requirements
             // .wrap(auth_middleware)
             .wrap(cors)
             .wrap(middleware::Logger::default())
-            .app_data(servers_pub.clone())
+            .app_data(active_servers.clone())
             .service(config::root);
 
-        for (i, server) in servers.iter().enumerate() {
-            let Server {
-                database,
-                server_ty,
-                ..
-            } = server;
-
-            let name = format!("{:?}{}", server_ty, i).to_lowercase();
-
-            let scope = match server_ty {
-                config::ServerType::Email => build_scope!(name, email, database),
-            };
-
-            app = app.service(scope);
+        match server_ty {
+            config::ServerType::Email => build_app!(app, email, database),
         }
-
-        app
     })
     .bind(format!("0.0.0.0:{}", port))?
     .run()
