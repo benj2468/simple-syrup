@@ -41,8 +41,10 @@ const createNewApp = async (name, stage) => {
 
 const setEnvs = async ({name, ty}) => {
     await exec(`heroku config:set -a ${name} HOST=${name}.herokuapp.com`)
-    .then(() => exec(`heroku config:set -a ${name} SERVER_TY="\"${ty}\""`))
+    .then(() => exec(`heroku config:set -a ${name} SERVER_TY='"${ty}"'`))
+    .then(console.log)
     .then(() => exec(`heroku config:set -a ${name} ACTIVE_SERVERS='${activeServers}'`))
+    .then(console.log)
     .then(() => {
         switch (ty) {
             case 'Email':
@@ -52,7 +54,6 @@ const setEnvs = async ({name, ty}) => {
         } 
     })
     .then(console.log)
-    .catch(console.log)
 }
 
 const main = async () => {
