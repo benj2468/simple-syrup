@@ -72,6 +72,10 @@ const main = async () => {
         })()
     }))
 
+    for (const {name} of apps) {
+        await exec(`git push heroku -a ${name} main`)
+    }
+
     console.log("Completed ✅")
 }
 
