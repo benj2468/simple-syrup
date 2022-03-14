@@ -76,5 +76,5 @@ pub struct ServerPublicData {
 pub async fn root(req: HttpRequest) -> impl Responder {
     let servers = req.app_data::<Vec<ServerPublicData>>().unwrap();
 
-    HttpResponseBuilder::new(StatusCode::OK).json(servers)
+    HttpResponseBuilder::new(StatusCode::OK).json("Foobar")
 }
