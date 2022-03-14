@@ -59,9 +59,11 @@ const main = async () => {
             try {
                 await createNewApp(server.name, stage)
             } catch (e) {
-                
+                console.log(`Did not create a new app: ${server.name}, Maybe it already existed`)
+            } finally {
+                await setEnvs(server)
             }
-            await setEnvs(server)
+            
         })()
     }))
 
