@@ -51,6 +51,7 @@ const setEnvs = async ({name, ty}) => {
                 throw Error("Unimplemented")
         } 
     })
+    .catch(console.log)
 }
 
 const main = async () => {
