@@ -14,15 +14,8 @@ pub struct DBOptions {
     pub(crate) uri: String,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-pub struct ConfigServer {
-    pub(crate) server_ty: ServerType,
-    pub(crate) db_options: DBOptions,
-}
-
 #[derive(Clone)]
 pub(crate) struct Server {
-    pub(crate) host: String,
     pub(crate) _dev_port: u32,
     pub(crate) database: PgPool,
     pub(crate) server_ty: ServerType,
@@ -30,73 +23,53 @@ pub(crate) struct Server {
 
 #[derive(Clone)]
 pub struct Config {
-    pub(crate) servers: Vec<Server>,
+    pub(crate) server: Server,
     pub(crate) host: String,
     pub(crate) port: u32,
+    pub(crate) active_servers: Vec<ServerPublicData>,
 }
 
 impl Config {
     pub async fn new() -> Config {
-        let config_servers = std::env::var("SERVERS_CONFIG").expect("Must supply SERVERS_CONFIG");
-        let config_servers: Vec<ConfigServer> =
-            serde_json::from_str(&config_servers).expect("Invalid Servers Config");
-
         let port: u32 = std::env::var("PORT")
             .expect("Must supply PORT")
             .parse()
             .expect("Expected a positive integer for the Root Port");
 
         let host: String = std::env::var("HOST").expect("Must supply HOST");
+        let db_uri: String = std::env::var("DATABASE_URL").expect("Must supply HOST");
+        let server_ty: ServerType =
+            serde_json::from_str(&std::env::var("SERVER_TY").expect("Must supply SERVER_TY"))
+                .expect("SERVER_TY not correctly formatted");
 
-        let dbs = futures::future::join_all(
-            config_servers
-                .iter()
-                .map(|s| &s.db_options)
-                .map(db::new_pool),
+        let active_servers: Vec<ServerPublicData> = serde_json::from_str(
+            &std::env::var("ACTIVE_SERVERS").expect("Must supply ACTIVE_SERVERS"),
         )
-        .await
-        .into_iter()
-        .collect::<sqlx::Result<Vec<PgPool>>>()
-        .expect("Unable to connect to some Databases on load");
+        .expect("Active servers not correctly formatted");
 
-        let servers: Vec<Server> = config_servers
-            .iter()
-            .zip(dbs)
-            .map(|(config, database)| Server {
-                database,
-                host: host.clone(),
-                server_ty: config.server_ty,
-                _dev_port: port,
-            })
-            .collect();
+        let database = db::new_pool(&DBOptions { uri: db_uri })
+            .await
+            .expect("could not connect to db");
+
+        let server = Server {
+            database,
+            server_ty,
+            _dev_port: port,
+        };
 
         Config {
             host,
-            servers,
+            server,
             port,
+            active_servers,
         }
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServerPublicData {
     url: String,
     server_ty: ServerType,
-}
-
-impl ServerPublicData {
-    pub(crate) fn new(i: usize, server: &Server) -> Self {
-        let Server {
-            server_ty, host, ..
-        } = server;
-        let name = format!("{:?}{}", server_ty, i).to_lowercase();
-        let url = format!("https://{}/{}/", host, name);
-        println!("[{:?}]: {}", server_ty, url);
-        ServerPublicData {
-            url,
-            server_ty: *server_ty,
-        }
-    }
 }
 
 #[actix_web::get("/")]

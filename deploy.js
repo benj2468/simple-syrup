@@ -7,6 +7,11 @@ const exec = promisify(require('child_process').exec)
 const stage = process.env.STAGE || 'staging'
 const SENDGRID_KEY = process.env.SENDGRID_KEY || 'unset'
 
+const activeServers = JSON.stringify(apps.map(({name, ty}) => ({
+    server_ty: ty,
+    url: `https://${name}.herokuapp.com`
+})))
+
 const createNewApp = async (name, stage) => {
     return exec(`heroku create -a ${name}`)
         .then(() => {
@@ -32,19 +37,12 @@ const createNewApp = async (name, stage) => {
         .then(() => {
             return exec(`heroku config:get -a ${name} DATABASE_URL`)
         })
-        .then(({stdout: url}) => {
-            const serverConfig = JSON.stringify([{
-                server_ty: ty,
-                db_options: {
-                    uri: url.trim()
-                }
-            }])
-            return exec(`heroku config:set -a ${name} SERVERS_CONFIG='${serverConfig}'`)
-        })
 }
 
 const setEnvs = async ({name, ty}) => {
     exec(`heroku config:set -a ${name} HOST=${name}.herokuapp.com`)
+    .then(() => exec(`heroku config:set -a ${name} SERVER_TY=${ty}`))
+    .then(() => exec(`heroku config:set -a ${name} ACTIVE_SERVERS='${activeServers}'`))
     .then(() => {
         switch (ty) {
             case 'Email':
@@ -69,6 +67,7 @@ const main = async () => {
 
     for(const {name} of apps) {
         console.log(`Pushing ${name} ...`)
+        await exec(`git pull https://git.heroku.com/${name}.git main`)
         await exec(`git push https://git.heroku.com/${name}.git HEAD:main`)
         console.log(`Completed ${name} ✅`)
     }
