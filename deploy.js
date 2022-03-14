@@ -41,7 +41,7 @@ const createNewApp = async (name, stage) => {
 
 const setEnvs = async ({name, ty}) => {
     exec(`heroku config:set -a ${name} HOST=${name}.herokuapp.com`)
-    .then(() => exec(`heroku config:set -a ${name} SERVER_TY='${ty}'`))
+    .then(() => exec(`heroku config:set -a ${name} SERVER_TY="${ty}"`))
     .then(() => exec(`heroku config:set -a ${name} ACTIVE_SERVERS='${activeServers}'`))
     .then(() => {
         switch (ty) {
