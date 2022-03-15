@@ -27,16 +27,14 @@ jobs:
   appsJson:
     runs-on: ubuntu-latest
     steps:
-      - uses: notiz-dev/github-action-json-property@release
-      - uses: ./
+      - uses: juliangruber/read-file-action@v1
         with: 
-          path: 'config.json'
-          prop_path: 'apps'
+          path: ./config.json
   deploy-apps:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app-name: ${{ fromJson(needs.appsJson.outputs.apps) }}
+        app-name: ${{ fromJson(needs.appsJson.outputs).apps }}
     needs: [deploy, appsJson]
     steps:
     - uses: actions/checkout@v2
