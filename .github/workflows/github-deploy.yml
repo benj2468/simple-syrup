@@ -24,34 +24,16 @@ jobs:
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
-  deploy0:
+  deploy-apps:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app-name: ${{ fromJson(../../config.js).apps }}
     needs: [deploy]
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
       with:
         heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: "cpass0"
+        heroku_app_name: "${{ matrix.app-name.name }}"
         heroku_email: "benjcape@gmail.com" 
-  deploy1:
-    runs-on: ubuntu-latest
-    needs: [deploy0]
-    steps:
-    - uses: actions/checkout@v2
-    - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
-      with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: "cpass1"
-        heroku_email: "benjcape@gmail.com" 
-  deploy2:
-    runs-on: ubuntu-latest
-    needs: [deploy1]
-    steps:
-    - uses: actions/checkout@v2
-    - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
-      with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: "cpass2"
-        heroku_email: "benjcape@gmail.com" 
-      
