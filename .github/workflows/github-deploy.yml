@@ -35,7 +35,7 @@ jobs:
         with: 
           path: 'config.json'
           prop_path: 'apps'
-      - run: echo ${{steps.version.outputs.prop}} 
+      - run: echo ${{steps.jsonStep.outputs.prop}} 
     
   deploy-apps:
     runs-on: ubuntu-latest
