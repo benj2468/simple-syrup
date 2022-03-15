@@ -25,9 +25,10 @@ pub trait ServerRequest<T> {
     fn get_secret_component(&self) -> Option<&String>;
 }
 
-pub mod email;
-
 #[get("/")]
 pub async fn index(_req: HttpRequest) -> impl Responder {
     web::Json("OK")
 }
+
+#[cfg(feature = "email")]
+pub mod email;

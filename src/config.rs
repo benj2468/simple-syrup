@@ -6,6 +6,7 @@ use sqlx::PgPool;
 
 #[derive(Clone, Copy, Deserialize, Serialize, Debug)]
 pub(crate) enum ServerType {
+    #[cfg(feature = "email")]
     Email,
 }
 

@@ -7,9 +7,15 @@ const exec = promisify(require('child_process').exec)
 const stage = process.env.STAGE || 'staging'
 const SENDGRID_KEY = process.env.SENDGRID_KEY || 'unset'
 
-const activeServers = JSON.stringify(apps.map(({name, ty}) => ({
-    server_ty: ty,
-    url: `https://${name}.herokuapp.com`
+const getActiveServers = async () => JSON.stringify(await Promise.all(apps.map(({name, ty}) => {
+    return (async () => {
+        const {stdout} = await exec(`heroku apps:info -a ${name} -j`)
+        const url = JSON.parse(stdout).app.web_url
+        return {
+            server_ty: ty,
+            url
+        }
+    })()
 })))
 
 const createNewApp = async (name, stage) => {
@@ -27,10 +33,6 @@ const createNewApp = async (name, stage) => {
             return exec(`heroku config:set -a ${name} PROCFILE=Procfile`)
         })
         .then(() => {
-            console.log('setting pipeline...')
-            return exec(`heroku pipelines:add cpass -a ${name} -s ${stage}`)
-        })
-        .then(() => {
             console.log('adding db...')
             return exec(`heroku addons:create -a ${name} heroku-postgresql --wait`)
         })
@@ -39,11 +41,13 @@ const createNewApp = async (name, stage) => {
         })
 }
 
-const setEnvs = async ({name, ty}) => {
+const setEnvs = async (activeServers, {name, ty}) => {
     await exec(`heroku config:set -a ${name} HOST=${name}.herokuapp.com`)
     .then(() => exec(`heroku config:set -a ${name} SERVER_TY='"${ty}"'`))
     .then(console.log)
     .then(() => exec(`heroku config:set -a ${name} ACTIVE_SERVERS='${activeServers}'`))
+    .then(console.log)
+    .then(() => exec(`heroku config:set -a ${name} RUST_CARGO_BUILD_FLAGS="--release --features ${name.toLowerCase()}"`))
     .then(console.log)
     .then(() => {
         switch (ty) {
@@ -63,14 +67,14 @@ const main = async () => {
                 await createNewApp(server.name, stage)
             } catch (e) {
                 console.log(`Did not create a new app: ${server.name}, Maybe it already existed`)
-            } finally {
-                console.log('here')
-                await setEnvs(server)
-                console.log('after...')
             }
             
         })()
     }))
+
+    const activeServers = await getActiveServers()
+
+    await Promise.all(apps.map(server => setEnvs(activeServers, server)))
 
     console.log("Completed ✅")
 }

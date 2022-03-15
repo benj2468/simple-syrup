@@ -7,7 +7,7 @@ prepare:
 run:
 	DATABASE_URL=postgres://localhost:5432/cpass cargo run
 build:
-	DATABASE_URL=postgres://localhost:5432/cpass cargo build
+	DATABASE_URL=postgres://localhost:5432/cpass cargo build --features email
 
 deploy:
 	node deploy.js

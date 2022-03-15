@@ -62,7 +62,10 @@ async fn root_server(root: Config) -> std::io::Result<()> {
             .service(config::root);
 
         match server_ty {
+            #[cfg(feature = "email")]
             config::ServerType::Email => build_app!(app, email, database),
+            #[allow(unreachable_patterns)]
+            _ => app,
         }
     })
     .bind(format!("0.0.0.0:{}", port))?
