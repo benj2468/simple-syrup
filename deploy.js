@@ -26,7 +26,7 @@ const createNewApp = async (name, stage) => {
         })
         .then(() => {
             console.log('adding buildpack...')
-            return exec(`heroku buildpacks:add -a ${name} emk/rust`)
+            return exec(`heroku buildpacks:add -a ${name} https://github.com/benj2468/heroku-buildpack-rust`)
         })
         .then(() => {
             console.log('setting procfile...')
