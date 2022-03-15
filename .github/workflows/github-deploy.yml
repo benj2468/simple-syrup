@@ -27,8 +27,10 @@ jobs:
   appsJson:
     runs-on: ubuntu-latest
     outputs:
-      config: ${{ steps.jsonStep.outputs.content }}
+      config: ${{ steps.js.outputs.content }}
     steps:
+      - name: cat
+        run: cat ./config.json
       - id: js
         uses: actions/checkout@v2
       - uses: juliangruber/read-file-action@v1 
