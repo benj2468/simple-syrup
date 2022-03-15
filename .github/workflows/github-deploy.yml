@@ -30,6 +30,7 @@ jobs:
       config: ${{ steps.js.outputs.content }}
     steps:
       - name: cat
+        uses: actions/checkout@v2
         run: cat config.json
       - id: js
         uses: actions/checkout@v2
