@@ -35,9 +35,6 @@ jobs:
         uses: juliangruber/read-file-action@v1 
         with: 
           path: config.json
-      - run: cat config.json
-      - name: Echo
-        run: echo "${{ steps.js.outputs.content }}"
       
     
   deploy-apps:
@@ -45,7 +42,7 @@ jobs:
     needs: [deploy, appsJson]
     strategy:
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.content) }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.config) }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
