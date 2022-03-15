@@ -28,8 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: notiz-dev/github-action-json-property@release
+      - uses: ./
         with: 
-          path: './config.json'
+          path: 'config.json'
           prop_path: 'apps'
   deploy-apps:
     runs-on: ubuntu-latest
