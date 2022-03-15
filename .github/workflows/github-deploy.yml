@@ -34,10 +34,10 @@ jobs:
           prop_path: 'apps'
   deploy-apps:
     runs-on: ubuntu-latest
+    needs: [deploy, appsJson]
     strategy:
       matrix:
-        app-name: ${{ fromJson(needs.appsJson.outputs.apps) }}
-    needs: [deploy, appsJson]
+        app-name: ${{ fromJson(needs.appsJson.outputs.prop) }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
