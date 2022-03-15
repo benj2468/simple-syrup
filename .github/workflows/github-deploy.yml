@@ -26,6 +26,7 @@ jobs:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
   deploy0:
     runs-on: ubuntu-latest
+    needs: [deploy]
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
@@ -35,6 +36,7 @@ jobs:
         heroku_email: "benjcape@gmail.com" 
   deploy1:
     runs-on: ubuntu-latest
+    needs: [deploy0]
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
@@ -44,6 +46,7 @@ jobs:
         heroku_email: "benjcape@gmail.com" 
   deploy2:
     runs-on: ubuntu-latest
+    needs: [deploy1]
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
