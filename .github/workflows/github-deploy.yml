@@ -29,16 +29,16 @@ jobs:
     outputs:
       config: ${{ steps.js.outputs.content }}
     steps:
-      - name: cat
-        uses: actions/checkout@v2
-        run: cat config.json
+      - name: Step 1
       - id: js
         uses: actions/checkout@v2
       - uses: juliangruber/read-file-action@v1 
         with: 
           path: config.json
+      - run: cat config.json
       - name: Echo
         run: echo "${{ steps.js.outputs.content }}"
+      
     
   deploy-apps:
     runs-on: ubuntu-latest
