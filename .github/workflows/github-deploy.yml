@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app-name: ${{ fromJson(../../config.js).apps }}
+        app-name: ${{ fromJson("../../config.js").apps }}
     needs: [deploy]
     steps:
     - uses: actions/checkout@v2
