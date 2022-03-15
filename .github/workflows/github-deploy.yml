@@ -24,7 +24,7 @@ jobs:
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
-  apps:
+  appsJson:
     runs-on: ubuntu-latest
     steps:
       - uses: notiz-dev/github-action-json-property@release
@@ -35,8 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app-name: ${{ fromJson(jobs.apps.apps) }}
-    needs: [deploy]
+        app-name: ${{ fromJson(needs.appsJson.outputs.apps) }}
+    needs: [deploy, appsJson]
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
