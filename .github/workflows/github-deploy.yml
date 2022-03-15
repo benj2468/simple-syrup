@@ -27,22 +27,22 @@ jobs:
   appsJson:
     runs-on: ubuntu-latest
     outputs:
-      config: ${{ steps.jsonStep.outputs.prop }}
+      config: ${{ steps.jsonStep.outputs.content }}
     steps:
       - id: jsonStep
         uses: actions/checkout@v2
-      - uses: notiz-dev/github-action-json-property@release
+      - uses: juliangruber/read-file-action@v1
         with: 
-          path: '../config.json'
-          prop_path: 'apps'
-      - run: echo ${{steps.jsonStep.outputs.prop}} 
+          path: config.json
+      - name: Echo
+        run: echo "${{ steps.jsonStep.outputs.content }}"
     
   deploy-apps:
     runs-on: ubuntu-latest
     needs: [deploy, appsJson]
     strategy:
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.config) }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.content) }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
