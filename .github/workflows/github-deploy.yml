@@ -29,13 +29,13 @@ jobs:
     outputs:
       config: ${{ steps.jsonStep.outputs.content }}
     steps:
-      - name: JSON Reader
-        id: jsonStep
-        uses: juliangruber/read-file-action@v1
+      - id: js
+        uses: actions/checkout@v2
+      - uses: juliangruber/read-file-action@v1 
         with: 
           path: ./config.json
       - name: Echo
-        run: echo "${{ steps.jsonStep.outputs.content }}"
+        run: echo "${{ steps.js.outputs.content }}"
     
   deploy-apps:
     runs-on: ubuntu-latest
