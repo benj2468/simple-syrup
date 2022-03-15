@@ -37,7 +37,7 @@ jobs:
     needs: [deploy, appsJson]
     strategy:
       matrix:
-        app-name: ${{ fromJson(needs.appsJson.outputs.prop) }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.prop) }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
