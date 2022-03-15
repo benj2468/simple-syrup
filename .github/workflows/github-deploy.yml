@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v2
       - uses: notiz-dev/github-action-json-property@release
         with: 
-          path: 'config.json'
+          path: '../../config.json'
           prop_path: 'apps'
       - run: echo ${{steps.jsonStep.outputs.prop}} 
     
