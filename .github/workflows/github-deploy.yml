@@ -29,9 +29,9 @@ jobs:
     outputs:
       config: ${{ steps.js.outputs.content }}
     steps:
+      - uses: actions/checkout@v2
       - name: Step 1
-      - id: js
-        uses: actions/checkout@v2
+        id: js
       - uses: juliangruber/read-file-action@v1 
         with: 
           path: config.json
