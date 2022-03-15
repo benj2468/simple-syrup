@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: JSON Reader
         id: jsonStep
-      - uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@v1
         with: 
           path: ./config.json
       - name: Echo
