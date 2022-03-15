@@ -47,7 +47,7 @@ const setEnvs = async (activeServers, {name, ty}) => {
     .then(console.log)
     .then(() => exec(`heroku config:set -a ${name} ACTIVE_SERVERS='${activeServers}'`))
     .then(console.log)
-    .then(() => exec(`heroku config:set -a ${name} RUST_CARGO_BUILD_FLAGS="--release --features ${name.toLowerCase()}"`))
+    .then(() => exec(`heroku config:set -a ${name} RUST_CARGO_BUILD_FLAGS="--release --features ${ty.toLowerCase()}"`))
     .then(console.log)
     .then(() => {
         switch (ty) {
