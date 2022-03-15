@@ -30,12 +30,12 @@ jobs:
       config: ${{ steps.js.outputs.content }}
     steps:
       - name: cat
-        run: cat ./config.json
+        run: cat config.json
       - id: js
         uses: actions/checkout@v2
       - uses: juliangruber/read-file-action@v1 
         with: 
-          path: ./config.json
+          path: config.json
       - name: Echo
         run: echo "${{ steps.js.outputs.content }}"
     
