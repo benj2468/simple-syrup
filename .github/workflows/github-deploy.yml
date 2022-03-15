@@ -26,18 +26,22 @@ jobs:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
   appsJson:
     runs-on: ubuntu-latest
+    outputs:
+      config: ${{ steps.jsonStep.outputs.prob }}
     steps:
+      - id: jsonStep
       - uses: actions/checkout@v2
       - uses: notiz-dev/github-action-json-property@release
         with: 
           path: 'config.json'
           prop_path: 'apps'
+    
   deploy-apps:
     runs-on: ubuntu-latest
     needs: [deploy, appsJson]
     strategy:
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.prop) }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.config) }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
