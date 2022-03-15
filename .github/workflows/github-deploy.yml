@@ -27,7 +27,7 @@ jobs:
   appsJson:
     runs-on: ubuntu-latest
     outputs:
-      config: ${{ steps.jsonStep.outputs.prob }}
+      config: ${{ steps.jsonStep.outputs.prop }}
     steps:
       - id: jsonStep
         uses: actions/checkout@v2
