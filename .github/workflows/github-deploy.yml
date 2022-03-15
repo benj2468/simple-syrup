@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Step 1
         id: js
-      - uses: juliangruber/read-file-action@v1 
+        uses: juliangruber/read-file-action@v1 
         with: 
           path: config.json
       - run: cat config.json
