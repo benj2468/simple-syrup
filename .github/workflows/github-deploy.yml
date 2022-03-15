@@ -9,10 +9,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
@@ -35,8 +31,6 @@ jobs:
         uses: juliangruber/read-file-action@v1 
         with: 
           path: config.json
-      
-    
   deploy-apps:
     runs-on: ubuntu-latest
     needs: [deploy, appsJson]
@@ -46,7 +40,6 @@ jobs:
         app-name: ${{ fromJSON(needs.appsJson.outputs.config).apps }}
     steps:
     - uses: actions/checkout@v2
-    - run: echo "${{ matrix.app-name.name }}"
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
       with:
         heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
