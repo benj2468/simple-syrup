@@ -24,11 +24,18 @@ jobs:
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: notiz-dev/github-action-json-property@release
+        with: 
+          path: 'config.json'
+          prop_path: 'apps'
   deploy-apps:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app-name: ${{ fromJson("../../config.js").apps }}
+        app-name: ${{ fromJson(jobs.apps.apps) }}
     needs: [deploy]
     steps:
     - uses: actions/checkout@v2
