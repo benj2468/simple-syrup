@@ -37,7 +37,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.config).apps }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.config).staging }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action

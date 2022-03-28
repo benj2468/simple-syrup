@@ -5,7 +5,9 @@ edition = "2018"
 build = "build.rs"
 
 [features]
+default = ["email", "qa"]
 email = []
+qa = []
 
 [build-dependencies]
 sqlx = "0.5.10"
@@ -28,7 +30,7 @@ openssl = "0.10.38"
 sendgrid = {version = "0.17.4", features = ["async"]}
 serde = "1.0.136"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-sqlx = {version = "0.5.10", features = [ "runtime-tokio-rustls", "postgres", "macros", "json", "offline" ]}
+sqlx = {version = "0.5.10", features = [ "runtime-tokio-rustls", "postgres", "macros", "json", "offline", "uuid" ]}
 tokio = "1.15.0"
 tokio-core = "0.1.18"
 totp-rs = "0.7.3"

@@ -12,7 +12,7 @@ mod server;
 
 pub(crate) struct DeriveData {
     pub(crate) ident: Ident,
-    pub(crate) req_ident: Ident,
+    pub(crate) attrs: Vec<Ident>,
     pub(crate) fields: Vec<Field>,
 }
 
@@ -21,33 +21,33 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
         let (args, tok) = tokens;
         let DeriveInput { data, ident, .. } = syn::parse(tok).unwrap();
 
-        let fields: Vec<Field> = match data {
+        let fields = match data {
             Data::Struct(data) => data.fields.into_iter().collect(),
             _ => unimplemented!("DeriveData is only for a struct"),
         };
 
-        let req_ident = match args
-            .get(0)
-            .expect("First argument must be the request structure")
-        {
-            NestedMeta::Meta(m) => match m {
-                Meta::Path(p) => {
-                    let seg = p
-                        .segments
-                        .iter()
-                        .next()
-                        .expect("Must have at least one segment");
-                    seg.ident.clone()
-                }
-                Meta::List(_) => unimplemented!(),
-                Meta::NameValue(_) => unimplemented!(),
-            },
-            _ => unimplemented!(),
-        };
+        let attrs = args
+            .iter()
+            .map(|v| match v {
+                NestedMeta::Meta(m) => match m {
+                    Meta::Path(p) => {
+                        let seg = p
+                            .segments
+                            .iter()
+                            .next()
+                            .expect("Must have at least one segment");
+                        seg.ident.clone()
+                    }
+                    Meta::List(_) => unimplemented!(),
+                    Meta::NameValue(_) => unimplemented!(),
+                },
+                _ => unimplemented!(),
+            })
+            .collect();
 
         Self {
             fields,
-            req_ident,
+            attrs,
             ident,
         }
     }
@@ -58,7 +58,7 @@ impl From<DeriveData> for TokenStream2 {
         let DeriveData { ident, fields, .. } = data;
         quote! {
             pub struct #ident {
-                pub pool: sqlx::Pool<sqlx::Postgres>,
+                pub base: super::base::BaseAuthenticator,
                 #(#fields,)*
             }
         }
@@ -67,9 +67,16 @@ impl From<DeriveData> for TokenStream2 {
 
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
-pub fn AuthServer(attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
     server::derive((args, input).into()).into()
+}
+
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn PassRequest(attr: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    server::derive_req((args, input).into()).into()
 }
 
 // #[cfg(test)]

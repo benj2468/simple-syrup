@@ -24,7 +24,7 @@ pub async fn validate_token(token: &str) -> Result<bool, HttpResponse> {
     .await
     .expect("failed to fetch jwks");
     let validations = vec![Validation::Issuer(authority), Validation::SubjectPresent];
-    let kid = match token_kid(&token) {
+    let kid = match token_kid(token) {
         Ok(res) => res.expect("failed to decode kid"),
         Err(_) => return Err(HttpResponseBuilder::new(StatusCode::FORBIDDEN).finish()),
     };
@@ -36,20 +36,18 @@ pub async fn validate_token(token: &str) -> Result<bool, HttpResponse> {
 async fn fetch_jwks(uri: &str) -> Result<JWKS, Box<dyn Error>> {
     let res = reqwest::get(uri).await?;
     let val = res.json::<JWKS>().await?;
-    return Ok(val);
+
+    Ok(val)
 }
 
 pub(crate) async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, actix_web::Error> {
-    let config = req
-        .app_data::<Config>()
-        .map(|data| data.clone())
-        .unwrap_or_else(Default::default);
+    let config = req.app_data::<Config>().cloned().unwrap_or_default();
     match validate_token(credentials.token()).await {
         Ok(res) => {
-            if res == true {
+            if res {
                 Ok(req)
             } else {
                 Err(AuthenticationError::from(config).into())

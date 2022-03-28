@@ -1,3 +1,4 @@
+#![feature(bool_to_option)]
 use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -51,7 +52,7 @@ async fn root_server(root: Config) -> std::io::Result<()> {
             .allow_any_origin()
             .allow_any_method();
 
-        let auth_middleware = HttpAuthentication::bearer(auth::validator);
+        let _auth_middleware = HttpAuthentication::bearer(auth::validator);
 
         let app = App::new()
             // Reset this when we are ready to implement JWT requirements
@@ -64,6 +65,8 @@ async fn root_server(root: Config) -> std::io::Result<()> {
         match server_ty {
             #[cfg(feature = "email")]
             config::ServerType::Email => build_app!(app, email, database),
+            #[cfg(feature = "qa")]
+            config::ServerType::QA => build_app!(app, qa, database),
             #[allow(unreachable_patterns)]
             _ => app,
         }
