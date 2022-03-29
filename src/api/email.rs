@@ -8,7 +8,10 @@ use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[PassRequest]
-pub struct EmailRequest {}
+pub struct EmailRequest {
+    // This is the OTP - because we want consistency with each server using stuff here in Authentication
+    data: Option<String>,
+}
 #[PassServer(EmailRequest)]
 pub struct EmailAuthenticator {}
 
@@ -54,7 +57,7 @@ impl AuthenticatorServer for EmailAuthenticator {
             }
         };
 
-        if BaseAuthenticator::verify(&id.to_string(), &data.otp) {
+        if BaseAuthenticator::verify(&id.to_string(), &data.data) {
             None
         } else {
             Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())

@@ -74,6 +74,7 @@ pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
+// This should generate 3 different structs: One for Verifying Registration, One for Requesting Authentication, and One for Verifying Authentication
 pub fn PassRequest(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
     server::derive_req((args, input).into()).into()
