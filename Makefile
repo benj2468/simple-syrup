@@ -7,7 +7,7 @@ prepare:
 	psql postgres -f ./init-dbs.sql
 
 deploy:
-	STAGE=staging node deploy.js
+	node deploy.js
 
 local:
 	SERVER_TY=\"QA\" ACTIVE_SERVERS=["{\"server_ty\": \"QA\", \"url\": \"http://localhost:8080\"}"] cargo run --features qa

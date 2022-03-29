@@ -4,7 +4,7 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev ]
 
 jobs:
   deploy:
@@ -13,14 +13,14 @@ jobs:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
       with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_api_key: ${{ secrets.DEV_HEROKU_API_KEY }}
         heroku_app_name: ""
-        heroku_email: "benjcape@gmail.com"
+        heroku_email: "benjamin.j.cape.22@dartmouth.com"
         justlogin: true
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
-        STAGE: staging
+        STAGE: dev
   appsJson:
     runs-on: ubuntu-latest
     outputs:
@@ -38,11 +38,11 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.config).staging }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.config).dev }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
       with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_api_key: ${{ secrets.DEV_HEROKU_API_KEY }}
         heroku_app_name: "${{ matrix.app-name.name }}"
-        heroku_email: "benjcape@gmail.com" 
+        heroku_email: "benjamin.j.cape.22@dartmouth.com" 

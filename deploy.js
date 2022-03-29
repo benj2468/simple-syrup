@@ -1,16 +1,13 @@
-const {staging, local} = require('./config.json')
+const config = require('./config.json')
 const {promisify} = require('util')
 const { exit } = require('process')
 
 const exec = promisify(require('child_process').exec)
 
-const stage = process.env.STAGE || 'staging'
+const stage = process.env.STAGE || 'local'
 const SENDGRID_KEY = process.env.SENDGRID_KEY || 'unset'
 
-const apps = (() => {switch (stage) {
-    case "staging": return staging
-    case "local": return local
-}})()
+const apps = config[stage]
 
 const getActiveServers = async () => JSON.stringify(await Promise.all(apps.map(({name, ty}) => {
     return (async () => {
