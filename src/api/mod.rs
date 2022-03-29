@@ -42,7 +42,9 @@ pub trait AuthenticatorServer {
     ///
     /// For other servers, such as QA, authentication is redundant.
     /// Authentication only is required when the server must send data to the user to verify identity, such as OTP.
-    async fn authenticate(&self, email: &str) -> Option<HttpResponse>;
+    async fn authenticate(&self, _email: &str) -> Option<HttpResponse> {
+        None
+    }
 
     /// Verify that the user is who they say they are.
     ///

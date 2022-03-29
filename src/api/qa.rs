@@ -26,10 +26,6 @@ impl QAAuthenticator {}
 #[async_trait]
 impl AuthenticatorServer for QAAuthenticator {
     type VerifyData = QARequest;
-
-    async fn authenticate(&self, _: &str) -> Option<HttpResponse> {
-        None
-    }
     async fn register_verify(
         &self,
         _email: &str,
@@ -69,6 +65,7 @@ impl AuthenticatorServer for QAAuthenticator {
                     .map_err(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
                     .err()
     }
+
     async fn verify_authentication(
         &self,
         _email: &str,
@@ -90,16 +87,15 @@ impl AuthenticatorServer for QAAuthenticator {
         };
 
         sqlx::query!(
-            "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) RETURNING data",
+            "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data->>'question' = $4 AND data->>'answer' = $5;",
             email,
             VerificationStatus::Verified as VerificationStatus,
             VerificationStatus::RequestAuth as VerificationStatus,
+            qa.question,
+            qa.answer
         )
         .fetch_one(&self.base.pool)
         .await
-        .map(|row| row.data)
-        .map(|data: Option<serde_json::Value>| data.map(|v| serde_json::from_value(v).unwrap()))
-        .map(|data: Option<QuestionAnswer>| data.is_some() && data.unwrap() == *qa)
         .map_err(|e| 
             actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
                 .json(e.to_string()),
