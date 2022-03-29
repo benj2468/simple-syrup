@@ -28,15 +28,7 @@ const createNewApp = async (server, stage) => {
     return exec(`heroku create -a ${name}`)
         .then(() => {
             console.log('adding buildpack...')
-            return exec(`heroku buildpacks:add -a ${name} heroku-community/multi-procfile`)
-        })
-        .then(() => {
-            console.log('adding buildpack...')
             return exec(`heroku buildpacks:add -a ${name} https://github.com/benj2468/heroku-buildpack-rust`)
-        })
-        .then(() => {
-            console.log('setting procfile...')
-            return exec(`heroku config:set -a ${name} PROCFILE=Procfile`)
         })
         .then(() => {
             console.log('adding db...')
