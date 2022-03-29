@@ -1,4 +1,3 @@
-#![feature(bool_to_option)]
 use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;

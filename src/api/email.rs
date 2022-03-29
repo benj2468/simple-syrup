@@ -54,8 +54,11 @@ impl AuthenticatorServer for EmailAuthenticator {
             }
         };
 
-        (!BaseAuthenticator::verify(&id.to_string(), &data.otp))
-            .then_some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
+        if BaseAuthenticator::verify(&id.to_string(), &data.otp) {
+            None
+        } else {
+            Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
+        }
     }
 }
 
