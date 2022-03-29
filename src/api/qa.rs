@@ -94,7 +94,7 @@ impl AuthenticatorServer for QAAuthenticator {
             qa.question,
             qa.answer
         )
-        .fetch_one(&self.base.pool)
+        .execute(&self.base.pool)
         .await
         .map_err(|e| 
             actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
