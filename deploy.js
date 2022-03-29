@@ -64,6 +64,8 @@ const setEnvs = async (activeServers, {name, ty}, stage) => {
         switch (ty) {
             case 'Email':
                 return
+            case 'QA':
+                return
             default:
                 throw Error("Unimplemented")
         } 
