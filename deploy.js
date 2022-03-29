@@ -75,7 +75,7 @@ const main = async () => {
     await Promise.all(apps.map((server) => {
         return (async () => {
             try {
-                await createNewApp(server.name, stage)
+                await createNewApp(server, stage)
             } catch (e) {
                 console.log(`Did not create a new app: ${server.name}, Maybe it already existed: ${e}`)
             }
