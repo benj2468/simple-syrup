@@ -18,11 +18,15 @@ impl BaseAuthenticator {
             pool,
         }
     }
-    pub async fn prepare(&self, email: &str, sec: &str) -> HttpResponse {
+    pub async fn prepare<T>(&self, email: &str, sec: &str, data: &T) -> HttpResponse
+    where
+        T: serde::Serialize,
+    {
         let res = sqlx::query!(
-            "INSERT INTO prepare (email, secret_component) VALUES ($1, $2) RETURNING id",
+            "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id",
             email,
-            &sec
+            &sec,
+            serde_json::to_value(data).unwrap(),
         )
         .fetch_one(&self.pool)
         .await
@@ -63,18 +67,14 @@ impl BaseAuthenticator {
         self.sg_client.send(message).await
     }
 
-    pub fn verify(id: &str, otp: &Option<String>) -> bool {
-        let otp = otp.as_ref();
-
+    pub fn verify(id: &str, otp: &str) -> bool {
         let totp = TOTP::new(totp_rs::Algorithm::SHA1, 6, 1, 30, id);
         let time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        otp.as_ref()
-            .map(|token| totp.check(token, time))
-            .unwrap_or_default()
+        totp.check(otp, time)
     }
 
     pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
@@ -94,9 +94,9 @@ impl BaseAuthenticator {
             .err()
     }
 
-    pub async fn get_prepared(&self, email: &str) -> Vec<(String, String)> {
+    pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
         sqlx::query!(
-            "SELECT id, secret_component from prepare WHERE email=$1",
+            "SELECT id, secret_component, data from prepare WHERE email=$1",
             email
         )
         .fetch_all(&self.pool)
@@ -107,10 +107,11 @@ impl BaseAuthenticator {
             (
                 rec.id as Option<Uuid>,
                 rec.secret_component.clone() as Option<String>,
+                rec.data.clone() as Option<serde_json::Value>,
             )
         })
-        .filter(|(id, _)| id.is_some())
-        .map(|(id, sec)| (id.unwrap().to_string(), sec.unwrap()))
+        .filter(|(a, b, c)| a.and(b.as_ref()).and(c.as_ref()).is_some())
+        .map(|(id, sec, data)| (id.unwrap().to_string(), sec.unwrap(), data.unwrap()))
         .collect()
     }
 

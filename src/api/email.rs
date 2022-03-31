@@ -2,22 +2,22 @@ use async_trait::async_trait;
 use derive::*;
 use sqlx::PgPool;
 
-use super::{base::BaseAuthenticator, AuthenticatorServer, ServerRequest, VerificationStatus};
+use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
 use actix_web::HttpResponse;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[PassRequest]
-pub struct EmailRequest {
+pub struct Email {
     // This is the OTP - because we want consistency with each server using stuff here in Authentication
-    data: Option<String>,
+    data: String,
 }
-#[PassServer(EmailRequest)]
+#[PassServer(Email)]
 pub struct EmailAuthenticator {}
 
 #[async_trait]
 impl AuthenticatorServer for EmailAuthenticator {
-    type VerifyData = EmailRequest;
+    type Data = String;
 
     async fn authenticate(&self, email: &str) -> Option<HttpResponse> {
         let id = match self.base.get_authenticated_id(email).await {
@@ -33,7 +33,7 @@ impl AuthenticatorServer for EmailAuthenticator {
         &self,
         email: &str,
         secret_component: &str,
-        _data: &Self::VerifyData,
+        _data: serde_json::Value,
     ) -> Option<HttpResponse> {
         sqlx::query!("INSERT INTO authenticated (email, secret_component, status) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component;",
                         email,
@@ -45,11 +45,7 @@ impl AuthenticatorServer for EmailAuthenticator {
                     .map_err(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
                     .err()
     }
-    async fn verify_authentication(
-        &self,
-        email: &str,
-        data: &Self::VerifyData,
-    ) -> Option<HttpResponse> {
+    async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse> {
         let id = match self.base.get_authenticated_id(email).await {
             Some(i) => i,
             None => {
@@ -57,7 +53,7 @@ impl AuthenticatorServer for EmailAuthenticator {
             }
         };
 
-        if BaseAuthenticator::verify(&id.to_string(), &data.data) {
+        if BaseAuthenticator::verify(&id.to_string(), data) {
             None
         } else {
             Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())

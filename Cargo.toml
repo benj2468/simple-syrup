@@ -5,9 +5,10 @@ edition = "2018"
 build = "build.rs"
 
 [features]
-default = ["email", "qa"]
+default = ["email", "qa", "password"]
 email = []
 qa = []
+password = []
 
 [build-dependencies]
 sqlx = "0.5.10"

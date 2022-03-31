@@ -14,8 +14,7 @@ pub enum VerificationStatus {
 
 #[async_trait]
 pub trait AuthenticatorServer {
-    type VerifyData;
-
+    type Data;
     /*
     The Options here are a reason for failure. If there is no reason for failure, that means we did not fail.
     - None => Good! :)
@@ -33,7 +32,7 @@ pub trait AuthenticatorServer {
         &self,
         email: &str,
         secret_component: &str,
-        data: &Self::VerifyData,
+        data: serde_json::Value,
     ) -> Option<HttpResponse>;
 
     /// Authenticates the user upon request.
@@ -51,16 +50,7 @@ pub trait AuthenticatorServer {
     /// This might take the OTP and confirm it. Or it might take some other data the user sends and confirm it some other way.
     ///
     /// Any API call to a 3rd party would happen here (faceID, etc.)
-    async fn verify_authentication(
-        &self,
-        email: &str,
-        data: &Self::VerifyData,
-    ) -> Option<HttpResponse>;
-}
-
-pub trait ServerRequest {
-    fn get_email(&self) -> &String;
-    fn get_secret_component(&self) -> Option<&String>;
+    async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse>;
 }
 
 #[get("/")]
@@ -75,3 +65,6 @@ pub mod email;
 
 #[cfg(feature = "qa")]
 pub mod qa;
+
+#[cfg(feature = "password")]
+pub mod password;

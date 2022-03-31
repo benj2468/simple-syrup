@@ -10,6 +10,8 @@ pub(crate) enum ServerType {
     Email,
     #[cfg(feature = "qa")]
     QA,
+    #[cfg(feature = "password")]
+    Password,
 }
 
 #[derive(Clone, Deserialize, Serialize)]

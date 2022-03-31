@@ -66,6 +66,8 @@ async fn root_server(root: Config) -> std::io::Result<()> {
             config::ServerType::Email => build_app!(app, email, database),
             #[cfg(feature = "qa")]
             config::ServerType::QA => build_app!(app, qa, database),
+            #[cfg(feature = "password")]
+            config::ServerType::Password => build_app!(app, password, database),
             #[allow(unreachable_patterns)]
             _ => app,
         }

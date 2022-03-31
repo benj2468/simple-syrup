@@ -8,47 +8,33 @@ use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
-pub struct QuestionAnswer {
-    question: String,
-    answer: String,
+pub struct Pass {
+    pub password: String
 }
 
 #[PassRequest]
-pub struct QA {
-    data: QuestionAnswer,
+pub struct Password {
+    data: Pass,
 }
 
-#[PassServer(QA)]
-pub struct QAAuthenticator {}
+#[PassServer(Password)]
+pub struct PasswordAuthenticator {}
 
 
 #[async_trait]
-impl AuthenticatorServer for QAAuthenticator {
-    type Data = QuestionAnswer;
+impl AuthenticatorServer for PasswordAuthenticator {
+    type Data = Pass;
     async fn register_verify(
         &self,
         email: &str,
         secret_component: &str,
         data: serde_json::Value,
     ) -> Option<HttpResponse> {
-        let qa = data;
-
-        // We should probably hash this...
-        let json_data = match serde_json::to_value(qa) {
-            Err(_) => {
-                return Some(
-                    actix_web::HttpResponseBuilder::new(StatusCode::NOT_ACCEPTABLE)
-                        .json("Invalid JSON"),
-                )
-            }
-            Ok(r) => r,
-        };
-
         sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
                         email,
                         secret_component,
                         VerificationStatus::Verified as VerificationStatus,
-                        json_data
+                        data
                     )
                     .execute(&self.base.pool)
                     .await
@@ -61,16 +47,13 @@ impl AuthenticatorServer for QAAuthenticator {
         email: &str,
         data: &Self::Data,
     ) -> Option<HttpResponse> {
-        // // We should probably hash this...
-        let qa = data;
 
         sqlx::query!(
-            "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data->>'question' = $4 AND data->>'answer' = $5;",
+            "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data->>'password' =$4;",
             email,
             VerificationStatus::Verified as VerificationStatus,
             VerificationStatus::RequestAuth as VerificationStatus,
-            qa.question,
-            qa.answer
+            data.password
         )
         .execute(&self.base.pool)
         .await
@@ -82,8 +65,8 @@ impl AuthenticatorServer for QAAuthenticator {
     }
 }
 
-pub fn server_builder(pool: PgPool) -> QAAuthenticator {
-    QAAuthenticator {
+pub fn server_builder(pool: PgPool) -> PasswordAuthenticator {
+    PasswordAuthenticator {
         base: BaseAuthenticator::new(pool),
     }
 }

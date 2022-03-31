@@ -1,14 +1,36 @@
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
-use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
 use syn::parse_macro_input;
 use syn::AttributeArgs;
+use syn::Ident;
 use syn::Meta;
 use syn::NestedMeta;
 use syn::{Data, DeriveInput, Field};
 
 mod server;
+
+pub(crate) struct Idents {
+    request_register: Ident,
+    verify_register: Ident,
+    request_auth: Ident,
+    verify_auth: Ident,
+}
+
+impl From<&Ident> for Idents {
+    fn from(req_ident: &Ident) -> Self {
+        let request_register = Ident::new(&format!("{}RegisterReq", req_ident), req_ident.span());
+        let verify_register =
+            Ident::new(&format!("{}VerifyRegisterReq", req_ident), req_ident.span());
+        let request_auth = Ident::new(&format!("{}AuthReq", req_ident), req_ident.span());
+        let verify_auth = Ident::new(&format!("{}VerifyAuthReq", req_ident), req_ident.span());
+
+        Self {
+            request_register,
+            verify_register,
+            request_auth,
+            verify_auth,
+        }
+    }
+}
 
 pub(crate) struct DeriveData {
     pub(crate) ident: Ident,
@@ -26,7 +48,7 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
             _ => unimplemented!("DeriveData is only for a struct"),
         };
 
-        let attrs = args
+        let attrs: Vec<_> = args
             .iter()
             .map(|v| match v {
                 NestedMeta::Meta(m) => match m {
@@ -53,18 +75,6 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
     }
 }
 
-impl From<DeriveData> for TokenStream2 {
-    fn from(data: DeriveData) -> Self {
-        let DeriveData { ident, fields, .. } = data;
-        quote! {
-            pub struct #ident {
-                pub base: super::base::BaseAuthenticator,
-                #(#fields,)*
-            }
-        }
-    }
-}
-
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
@@ -74,7 +84,6 @@ pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
-// This should generate 3 different structs: One for Verifying Registration, One for Requesting Authentication, and One for Verifying Authentication
 pub fn PassRequest(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
     server::derive_req((args, input).into()).into()
