@@ -8,34 +8,30 @@ use syn::{Data, DeriveInput, Field};
 
 mod server;
 
+pub(crate) enum DataStorage {
+    Ignored,
+    Hashed,
+    Stored,
+}
+
+pub(crate) struct DerivedRequest {
+    idents: Idents,
+    data_storage_ty: DataStorage,
+}
+
 pub(crate) struct Idents {
+    base: Ident,
     request_register: Ident,
     verify_register: Ident,
     request_auth: Ident,
     verify_auth: Ident,
 }
 
-impl From<&Ident> for Idents {
-    fn from(req_ident: &Ident) -> Self {
-        let request_register = Ident::new(&format!("{}RegisterReq", req_ident), req_ident.span());
-        let verify_register =
-            Ident::new(&format!("{}VerifyRegisterReq", req_ident), req_ident.span());
-        let request_auth = Ident::new(&format!("{}AuthReq", req_ident), req_ident.span());
-        let verify_auth = Ident::new(&format!("{}VerifyAuthReq", req_ident), req_ident.span());
-
-        Self {
-            request_register,
-            verify_register,
-            request_auth,
-            verify_auth,
-        }
-    }
-}
-
 pub(crate) struct DeriveData {
     pub(crate) ident: Ident,
     pub(crate) attrs: Vec<Ident>,
     pub(crate) fields: Vec<Field>,
+    pub(crate) request: DerivedRequest,
 }
 
 impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
@@ -67,10 +63,42 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
             })
             .collect();
 
+        let request_register = Ident::new(&format!("{}RegisterReq", ident), ident.span());
+        let verify_register = Ident::new(&format!("{}VerifyRegisterReq", ident), ident.span());
+        let request_auth = Ident::new(&format!("{}AuthReq", ident), ident.span());
+        let verify_auth = Ident::new(&format!("{}VerifyAuthReq", ident), ident.span());
+
+        let idents = Idents {
+            base: attrs
+                .get(0)
+                .expect("Must provide a Request Data Type!")
+                .clone(),
+            request_register,
+            verify_register,
+            request_auth,
+            verify_auth,
+        };
+
+        let request = DerivedRequest {
+            idents,
+            data_storage_ty: match attrs.get(1) {
+                Some(id) => match id.to_string().as_str() {
+                    "Ignored" => DataStorage::Ignored,
+                    "Hashed" => DataStorage::Hashed,
+                    "Stored" => DataStorage::Stored,
+                    _ => unimplemented!(
+                        "That period is not supported (support: Ignored, Hashed, Stored)"
+                    ),
+                },
+                None => DataStorage::Stored,
+            },
+        };
+
         Self {
             fields,
             attrs,
             ident,
+            request,
         }
     }
 }
@@ -81,13 +109,5 @@ pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
     server::derive((args, input).into()).into()
 }
-
-#[proc_macro_attribute]
-#[allow(non_snake_case)]
-pub fn PassRequest(attr: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(attr as AttributeArgs);
-    server::derive_req((args, input).into()).into()
-}
-
 // #[cfg(test)]
 // mod test;

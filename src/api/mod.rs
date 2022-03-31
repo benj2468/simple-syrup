@@ -21,20 +21,6 @@ pub trait AuthenticatorServer {
     - Some(error) => Bad, return the error
     */
 
-    /// Verifies the registration.
-    ///
-    /// This includes inserting any data into the table that is received upon verifying registration. This only happens for some verification servers.
-    /// This also must save the secret component. This happens for ALL authentication servers.
-    ///
-    /// i.e. With QA verification, this includes saving the QA that the user specified.
-    /// i.e. With Email verification, this only includes saving the secret_component
-    async fn register_verify(
-        &self,
-        email: &str,
-        secret_component: &str,
-        data: serde_json::Value,
-    ) -> Option<HttpResponse>;
-
     /// Authenticates the user upon request.
     ///
     /// This happens AFTER the user is verified. Verification happens through the same process for everyone - verifying their email

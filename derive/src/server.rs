@@ -1,12 +1,30 @@
+use crate::DataStorage;
+
 use super::{DeriveData, Idents};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
 pub(crate) fn derive_register(input: &DeriveData) -> TokenStream2 {
-    let DeriveData { ident, attrs, .. } = input;
+    let DeriveData { ident, request, .. } = input;
 
-    let req_ident =
-        Idents::from(attrs.get(0).expect("Must provide a Request Data Type!")).request_register;
+    let req_ident = &request.idents.request_register;
+    let data_type = &request.idents.base;
+
+    let data = match request.data_storage_ty {
+        DataStorage::Stored => quote! {
+            &request.data
+        },
+        DataStorage::Hashed => quote! {
+            &{
+                let mut hasher = DefaultHasher::new();
+                request.data.hash(&mut hasher);
+                hasher.finish()
+            }
+        },
+        DataStorage::Ignored => quote! {
+            &#data_type::default()
+        },
+    };
 
     quote! {
         #[actix_web::post("/register")]
@@ -17,19 +35,18 @@ pub(crate) fn derive_register(input: &DeriveData) -> TokenStream2 {
 
             let email = &request.email;
             let secret_component = &request.secret_component;
-            let data = &request.data;
 
-            authenticator.base.prepare(email, secret_component, data)
+
+            authenticator.base.prepare(email, secret_component, #data)
                 .await
         }
     }
 }
 
 pub(crate) fn derive_register_verify(input: &DeriveData) -> TokenStream2 {
-    let DeriveData { ident, attrs, .. } = input;
+    let DeriveData { ident, request, .. } = input;
 
-    let req_ident =
-        Idents::from(attrs.get(0).expect("Must provide a Request Data Type!")).verify_register;
+    let req_ident = &request.idents.verify_register;
 
     quote! {
         #[actix_web::post("/register/verify")]
@@ -47,7 +64,7 @@ pub(crate) fn derive_register_verify(input: &DeriveData) -> TokenStream2 {
                 .find(|(id, _, _)| BaseAuthenticator::verify(&id, otp))
                 {
                     Some((_, sec, data)) => {
-                        authenticator.register_verify(email, &sec, data)
+                        authenticator.base.verify_register(email, &sec, data)
                         .await
                         .unwrap_or_else(|| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
                     },
@@ -58,10 +75,9 @@ pub(crate) fn derive_register_verify(input: &DeriveData) -> TokenStream2 {
 }
 
 pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
-    let DeriveData { ident, attrs, .. } = input;
+    let DeriveData { ident, request, .. } = input;
 
-    let req_ident =
-        Idents::from(attrs.get(0).expect("Must provide a Request Data Type!")).request_auth;
+    let req_ident = &request.idents.request_auth;
 
     quote! {
         #[actix_web::post("/authenticate")]
@@ -76,7 +92,7 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
 
             sqlx::query!(
                 "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4;",
-                email,
+                BaseAuthenticator::hash(email),
                 VerificationStatus::RequestAuth as VerificationStatus,
                 VerificationStatus::Verified as VerificationStatus,
                 VerificationStatus::RequestAuth as VerificationStatus
@@ -90,10 +106,9 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
 }
 
 pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
-    let DeriveData { ident, attrs, .. } = input;
+    let DeriveData { ident, request, .. } = input;
 
-    let req_ident =
-        Idents::from(attrs.get(0).expect("Must provide a Request Data Type!")).verify_auth;
+    let req_ident = &request.idents.verify_auth;
 
     quote! {
         #[actix_web::post("/authenticate/verify")]
@@ -108,7 +123,7 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
                 Some(err) => err,
                 None => {
                     sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;",
-                        email,
+                        BaseAuthenticator::hash(email),
                         VerificationStatus::Verified as VerificationStatus,
                         VerificationStatus::RequestAuth as VerificationStatus,
                     )
@@ -124,10 +139,9 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
 }
 
 pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
-    let DeriveData { ident, attrs, .. } = input;
+    let DeriveData { ident, request, .. } = input;
 
-    let req_ident =
-        Idents::from(attrs.get(0).expect("Must provide a Request Data Type!")).request_auth;
+    let req_ident = &request.idents.request_auth;
 
     quote! {
         #[actix_web::post("/status")]
@@ -162,25 +176,38 @@ pub(crate) fn derive_meta(input: &DeriveData) -> TokenStream2 {
     }
 }
 
-pub(crate) fn derive_req(input: DeriveData) -> TokenStream2 {
-    let DeriveData { fields, ident, .. } = input;
-
-    let req_ident = &ident;
+pub(crate) fn derive_req(input: &DeriveData) -> TokenStream2 {
+    let DeriveData { request, .. } = input;
 
     let Idents {
         request_auth,
         request_register,
         verify_register,
         verify_auth,
-    } = req_ident.into();
+        base,
+    } = &request.idents;
+
+    let request_register_struct = match request.data_storage_ty {
+        DataStorage::Stored | DataStorage::Hashed => quote! {
+            #[derive(Debug, Deserialize, Serialize)]
+            pub struct #request_register {
+                email: String,
+                secret_component: String,
+                data: #base
+            }
+        },
+        DataStorage::Ignored => quote! {
+            #[derive(Debug, Deserialize, Serialize)]
+            pub struct #request_register {
+                email: String,
+                secret_component: String,
+            }
+        },
+    };
 
     quote! {
-        #[derive(Debug, Deserialize, Serialize)]
-        pub struct #request_register {
-            email: String,
-            secret_component: String,
-            #(#fields,)*
-        }
+
+        #request_register_struct
 
         #[derive(Debug, Deserialize, Serialize)]
         pub struct #verify_register {
@@ -197,7 +224,7 @@ pub(crate) fn derive_req(input: DeriveData) -> TokenStream2 {
         #[derive(Debug, Deserialize, Serialize)]
         pub struct #verify_auth {
             email: String,
-            #(#fields,)*
+            data: #base
         }
 
     }
@@ -223,9 +250,13 @@ pub(crate) fn derive(input: DeriveData) -> TokenStream2 {
     let meta_data = derive_meta(&input);
     let status = derive_status(&input);
 
+    let request_structures = derive_req(&input);
+
     let re_struct: TokenStream2 = input.into();
 
     quote! {
+
+        #request_structures
 
         #re_struct
 
@@ -240,5 +271,7 @@ pub(crate) fn derive(input: DeriveData) -> TokenStream2 {
         #ver_auth
 
         #status
+
+
     }
 }

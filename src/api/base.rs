@@ -1,9 +1,15 @@
-use std::time::SystemTime;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    time::SystemTime,
+};
 
 use actix_web::HttpResponse;
 use hyper::StatusCode;
 use sqlx::{types::Uuid, PgPool};
 use totp_rs::TOTP;
+
+use crate::api::VerificationStatus;
 
 pub struct BaseAuthenticator {
     pub sg_client: sendgrid::SGClient,
@@ -18,13 +24,20 @@ impl BaseAuthenticator {
             pool,
         }
     }
+
+    pub fn hash(s: &str) -> String {
+        let mut hasher = DefaultHasher::new();
+        s.hash(&mut hasher);
+        hasher.finish().to_string()
+    }
+
     pub async fn prepare<T>(&self, email: &str, sec: &str, data: &T) -> HttpResponse
     where
         T: serde::Serialize,
     {
         let res = sqlx::query!(
             "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id",
-            email,
+            Self::hash(email),
             &sec,
             serde_json::to_value(data).unwrap(),
         )
@@ -52,7 +65,6 @@ impl BaseAuthenticator {
         email: &str,
         otp: &str,
     ) -> sendgrid::SendgridResult<reqwest::Response> {
-        println!("Sending {:?} to {:?}", otp, email);
         let body = format!("Your OTP for CryptoPass: {}", otp);
         let message = sendgrid::Mail::new()
             .add_from("benjcape@gmail.com")
@@ -77,6 +89,24 @@ impl BaseAuthenticator {
         totp.check(otp, time)
     }
 
+    pub async fn verify_register(
+        &self,
+        email: &str,
+        secret_component: &str,
+        data: serde_json::Value,
+    ) -> Option<HttpResponse> {
+        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
+                        Self::hash(email),
+                        secret_component,
+                        VerificationStatus::Verified as VerificationStatus,
+                        data
+                    )
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
+                    .err()
+    }
+
     pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
         let totp = TOTP::new(totp_rs::Algorithm::SHA1, 6, 1, 30, id);
         let time = SystemTime::now()
@@ -97,7 +127,7 @@ impl BaseAuthenticator {
     pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
         sqlx::query!(
             "SELECT id, secret_component, data from prepare WHERE email=$1",
-            email
+            Self::hash(email)
         )
         .fetch_all(&self.pool)
         .await
@@ -116,10 +146,13 @@ impl BaseAuthenticator {
     }
 
     pub async fn get_authenticated_id(&self, email: &str) -> Option<Uuid> {
-        sqlx::query!("SELECT id from authenticated WHERE email=$1", email)
-            .fetch_one(&self.pool)
-            .await
-            .ok()
-            .and_then(|rec| rec.id)
+        sqlx::query!(
+            "SELECT id from authenticated WHERE email=$1",
+            Self::hash(email)
+        )
+        .fetch_one(&self.pool)
+        .await
+        .ok()
+        .and_then(|rec| rec.id)
     }
 }
