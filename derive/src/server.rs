@@ -155,7 +155,7 @@ pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
             let email = request.email;
 
             sqlx::query::<sqlx::Postgres>("SELECT status FROM authenticated WHERE email=$1;")
-                .bind(email)
+                .bind(BaseAuthenticator::hash(&email))
                 .fetch_one(&authenticator.base.pool)
                 .await
                 .map(|row| row.try_get("status").unwrap())
