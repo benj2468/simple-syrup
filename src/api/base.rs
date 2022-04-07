@@ -12,14 +12,17 @@ use totp_rs::TOTP;
 use crate::api::VerificationStatus;
 
 pub struct BaseAuthenticator {
+    #[cfg(not(test))]
     pub sg_client: sendgrid::SGClient,
     pub pool: sqlx::Pool<sqlx::Postgres>,
 }
 
 impl BaseAuthenticator {
     pub fn new(pool: PgPool) -> Self {
+        #[cfg(not(test))]
         let my_secret_key = std::env::var("SENDGRID_KEY").expect("need SENDGRID_KEY to test");
         Self {
+            #[cfg(not(test))]
             sg_client: sendgrid::SGClient::new(my_secret_key),
             pool,
         }
