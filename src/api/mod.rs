@@ -13,6 +13,20 @@ pub enum VerificationStatus {
     RequestAuth,
 }
 
+pub(crate) trait TestDefault<T> {
+    fn or_test_default(self, default: T) -> Option<T>;
+}
+
+impl<T> TestDefault<T> for Option<T> {
+    fn or_test_default(self, default: T) -> Option<T> {
+        if cfg!(test) {
+            Some(default)
+        } else {
+            self
+        }
+    }
+}
+
 #[async_trait]
 pub trait AuthenticatorServer {
     type Data;
@@ -29,11 +43,7 @@ pub trait AuthenticatorServer {
     /// For other servers, such as QA, authentication is redundant.
     /// Authentication only is required when the server must send data to the user to verify identity, such as OTP.
     async fn authenticate(&self, _email: &str) -> Option<HttpResponse> {
-        if cfg!(test) {
-            Some(HttpResponseBuilder::new(StatusCode::OK).json(""))
-        } else {
-            None
-        }
+        None.or_test_default(HttpResponseBuilder::new(StatusCode::OK).json(""))
     }
 
     /// Verify that the user is who they say they are.
