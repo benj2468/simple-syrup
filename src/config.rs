@@ -42,11 +42,11 @@ impl Config {
             url: "https://server.test:8080".into(),
         };
 
-        let database = db::new_pool(&DBOptions {
-            uri: format!("postgres://localhost:5432/cpasstest_{:?}", server_ty).to_lowercase(),
-        })
-        .await
-        .expect("Could not connect to test pool");
+        let db = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+        let database = db::new_pool(&DBOptions { uri: db })
+            .await
+            .expect("Could not connect to test pool");
 
         sqlx::migrate!()
             .run(&database)

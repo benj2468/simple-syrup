@@ -6,7 +6,7 @@ async fn main() {
         .map(|v| v == "1")
         .unwrap_or(true); // run by default
 
-    if (build_enabled) {
+    if build_enabled {
         let uri: String = std::env::var("DATABASE_URL").expect("Must supply DATABASE_URL");
 
         let db = PgPoolOptions::new()

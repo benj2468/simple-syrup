@@ -110,7 +110,7 @@ impl TestApp {
         test::call_and_read_body_json(&app, req).await
     }
 
-    pub(crate) async fn verify_auth<T>(&self, data: &T) -> String
+    pub(crate) async fn _verify_auth<T>(&self, data: &T) -> String
     where
         T: Serialize,
     {
