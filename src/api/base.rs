@@ -11,8 +11,6 @@ use totp_rs::TOTP;
 
 use crate::api::VerificationStatus;
 
-use super::TestDefault;
-
 pub struct BaseAuthenticator {
     pub sg_client: sendgrid::SGClient,
     pub pool: sqlx::Pool<sqlx::Postgres>,
@@ -100,13 +98,16 @@ impl BaseAuthenticator {
 
         let otp = totp.generate(time);
 
-        self.send_email(email, &otp)
-            .await
-            .map_err(|e| {
-                actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())
-            })
-            .err()
-            .or_test_default(actix_web::HttpResponseBuilder::new(StatusCode::OK).json(otp))
+        if cfg!(test) {
+            Some(actix_web::HttpResponseBuilder::new(StatusCode::OK).json(otp))
+        } else {
+            self.send_email(email, &otp)
+                .await
+                .map_err(|e| {
+                    actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())
+                })
+                .err()
+        }
     }
 
     pub async fn verify_register(

@@ -1,5 +1,7 @@
 SERVER_TY=email
 
+test:
+	cargo test -- --test-threads=1
 
 prepare:
 	mkcert localhost

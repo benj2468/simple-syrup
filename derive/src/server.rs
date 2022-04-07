@@ -82,6 +82,7 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
     quote! {
         #[actix_web::post("/authenticate")]
         pub async fn auth(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
+            use crate::api::TestDefault;
             let authenticator = req.app_data::<#ident>().unwrap();
 
             let request = request.0;
@@ -102,10 +103,8 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
             )
                 .fetch_one(&authenticator.base.pool)
                 .await
-                .map(|_| {
-                    actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
-                        .or_test_default(auth_data.unwrap())
-                })
+                .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
+                .or_test_default(auth_data.unwrap())
                 .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
         }
     }

@@ -14,13 +14,23 @@ pub enum VerificationStatus {
 }
 
 pub(crate) trait TestDefault<T> {
-    fn or_test_default(self, default: T) -> Option<T>;
+    fn or_test_default(self, default: T) -> Self;
 }
 
 impl<T> TestDefault<T> for Option<T> {
     fn or_test_default(self, default: T) -> Option<T> {
         if cfg!(test) {
             Some(default)
+        } else {
+            self
+        }
+    }
+}
+
+impl<T, E> TestDefault<T> for Result<T, E> {
+    fn or_test_default(self, default: T) -> Result<T, E> {
+        if cfg!(test) {
+            self.map(|_| default)
         } else {
             self
         }
