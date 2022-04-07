@@ -2,16 +2,22 @@ use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
 async fn main() {
-    let uri: String = std::env::var("DATABASE_URL").expect("Must supply DATABASE_URL");
+    let build_enabled = std::env::var("BUILD_ENABLED")
+        .map(|v| v == "1")
+        .unwrap_or(true); // run by default
 
-    let db = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&uri)
-        .await
-        .expect("Could not connect to db");
+    if (build_enabled) {
+        let uri: String = std::env::var("DATABASE_URL").expect("Must supply DATABASE_URL");
 
-    sqlx::migrate!()
-        .run(&db)
-        .await
-        .expect("There was an error running the migration");
+        let db = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&uri)
+            .await
+            .expect("Could not connect to db");
+
+        sqlx::migrate!()
+            .run(&db)
+            .await
+            .expect("There was an error running the migration");
+    }
 }

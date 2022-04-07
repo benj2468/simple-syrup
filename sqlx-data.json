@@ -1,52 +1,26 @@
 {
   "db": "PostgreSQL",
-  "3ada8d7741a59f19d6894d138cd1b2b882a4c68e350884a8a8438cfd65607c34": {
+  "6ea37ce7c0a68d1d0a8323aa124ed2efc808190e560867e6a28e0cdb204af69f": {
     "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        true
+      ],
       "parameters": {
         "Left": [
-          "Text",
-          {
-            "Custom": {
-              "kind": {
-                "Enum": [
-                  "Requested",
-                  "Verified",
-                  "RequestAuth"
-                ]
-              },
-              "name": "verificationstatus"
-            }
-          },
-          {
-            "Custom": {
-              "kind": {
-                "Enum": [
-                  "Requested",
-                  "Verified",
-                  "RequestAuth"
-                ]
-              },
-              "name": "verificationstatus"
-            }
-          },
-          {
-            "Custom": {
-              "kind": {
-                "Enum": [
-                  "Requested",
-                  "Verified",
-                  "RequestAuth"
-                ]
-              },
-              "name": "verificationstatus"
-            }
-          }
+          "Varchar",
+          "Varchar",
+          "Jsonb"
         ]
       }
     },
-    "query": "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4;"
+    "query": "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id"
   },
   "8876765f60635025dae98b8a2f637922f050bc4ff380f7c9db6116906dbf0db7": {
     "describe": {
@@ -92,14 +66,73 @@
     },
     "query": "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;"
   },
-  "f13320c4f18f0100f05ce2a9075384cc0a09e3785b556a33731078b3a97fa536": {
+  "9b832565f622c685bd2be14e8a04dfcc1b9cea3f77932a40bd198a292fdbc4ca": {
     "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        true
+      ],
       "parameters": {
         "Left": [
-          "Varchar",
-          "Varchar",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT id from authenticated WHERE email=$1"
+  },
+  "bcceeb4479cb94abc0b5d915333652ca07bd44a2bbcf98ec9db876a691592304": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "secret_component",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "data",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT id, secret_component, data from prepare WHERE email=$1"
+  },
+  "db7c0001e556278d48c221daceba6780229f981d68cdf0d5ebcbaa40348f5702": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
           {
             "Custom": {
               "kind": {
@@ -111,19 +144,52 @@
               },
               "name": "verificationstatus"
             }
-          }
+          },
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          "Jsonb"
         ]
       }
     },
-    "query": "INSERT INTO authenticated (email, secret_component, status) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component;"
+    "query": "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data = $4 RETURNING id;"
   },
-  "f8c7dcfa7b684e8a76155f1b3d45cc1a496b939a6569a228147fd9ac3a907b60": {
+  "de758990329e3869510323cff20a6a68f3b3bad567905fe8134160d37dd09de7": {
     "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        true
+      ],
       "parameters": {
         "Left": [
           "Text",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
           {
             "Custom": {
               "kind": {
@@ -151,6 +217,32 @@
         ]
       }
     },
-    "query": "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3;"
+    "query": "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4 RETURNING id;"
+  },
+  "f9e39386932b31ea6203f316104d73d4b411dae131cd0324d1024677dca15b98": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "Requested",
+                  "Verified",
+                  "RequestAuth"
+                ]
+              },
+              "name": "verificationstatus"
+            }
+          },
+          "Jsonb"
+        ]
+      }
+    },
+    "query": "INSERT INTO authenticated (email, secret_component, status, data) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;"
   }
 }
