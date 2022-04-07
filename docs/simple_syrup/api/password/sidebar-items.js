@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["server_builder",""]],"struct":[["Pass",""],["PasswordAuthenticator",""],["PasswordAuthenticatorAuthReq",""],["PasswordAuthenticatorRegisterReq",""],["PasswordAuthenticatorVerifyAuthReq",""],["PasswordAuthenticatorVerifyRegisterReq",""],["auth",""],["auth_check",""],["register",""],["register_check",""],["server_ty",""],["status_check",""]]});
