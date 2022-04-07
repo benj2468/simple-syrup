@@ -1,5 +1,5 @@
 {
-    "apps": [
+    "staging": [
         {
             "name": "cpass0",
             "ty": "Email"
@@ -11,6 +11,26 @@
         {
             "name": "cpass2",
             "ty": "Email"
+        }
+    ],
+    "dev": [
+        {
+            "name": "dev-cpass0",
+            "ty": "Email"
+        },
+        {
+            "name": "dev-cpass1",
+            "ty": "QA"
+        },
+        {
+            "name": "dev-cpass2",
+            "ty": "Email"
+        }
+    ],
+    "local": [
+        {
+            "name": "loc-cpass0",
+            "ty": "QA"
         }
     ]
 }

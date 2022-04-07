@@ -5,6 +5,9 @@ name: Node.js CI
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
 
 jobs:
   deploy:
@@ -20,6 +23,7 @@ jobs:
     - run: make deploy
       env:
         SENDGRID_KEY: ${{ secrets.SENDGRID_KEY }}
+        STAGE: staging
   appsJson:
     runs-on: ubuntu-latest
     outputs:
@@ -37,7 +41,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        app-name: ${{ fromJSON(needs.appsJson.outputs.config).apps }}
+        app-name: ${{ fromJSON(needs.appsJson.outputs.config).staging }}
     steps:
     - uses: actions/checkout@v2
     - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
@@ -45,3 +49,15 @@ jobs:
         heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
         heroku_app_name: "${{ matrix.app-name.name }}"
         heroku_email: "benjcape@gmail.com" 
+  docs:
+    runs-on: ubuntu-latest
+    needs: deploy-apps
+    steps:
+    - uses: actions/checkout@v2
+    - run: |
+        make docs
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add -f docs/
+        git commit -m "generated docs"
+        git push

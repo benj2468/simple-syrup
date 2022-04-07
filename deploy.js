@@ -1,11 +1,13 @@
-const {apps} = require('./config.json')
+const config = require('./config.json')
 const {promisify} = require('util')
 const { exit } = require('process')
 
 const exec = promisify(require('child_process').exec)
 
-const stage = process.env.STAGE || 'staging'
+const stage = process.env.STAGE || 'local'
 const SENDGRID_KEY = process.env.SENDGRID_KEY || 'unset'
+
+const apps = config[stage]
 
 const getActiveServers = async () => JSON.stringify(await Promise.all(apps.map(({name, ty}) => {
     return (async () => {
@@ -18,19 +20,15 @@ const getActiveServers = async () => JSON.stringify(await Promise.all(apps.map((
     })()
 })))
 
-const createNewApp = async (name, stage) => {
+const createNewApp = async (server, stage) => {
+    if (stage == "local") {
+        return exec(`cargo run`)
+    }
+    const {name} = server
     return exec(`heroku create -a ${name}`)
         .then(() => {
             console.log('adding buildpack...')
-            return exec(`heroku buildpacks:add -a ${name} heroku-community/multi-procfile`)
-        })
-        .then(() => {
-            console.log('adding buildpack...')
             return exec(`heroku buildpacks:add -a ${name} https://github.com/benj2468/heroku-buildpack-rust`)
-        })
-        .then(() => {
-            console.log('setting procfile...')
-            return exec(`heroku config:set -a ${name} PROCFILE=Procfile`)
         })
         .then(() => {
             console.log('adding db...')
@@ -41,7 +39,8 @@ const createNewApp = async (name, stage) => {
         })
 }
 
-const setEnvs = async (activeServers, {name, ty}) => {
+const setEnvs = async (activeServers, {name, ty}, stage) => {
+    if (stage == 'local') return
     await exec(`heroku config:set -a ${name} HOST=${name}.herokuapp.com`)
     .then(() => exec(`heroku config:set -a ${name} SERVER_TY='"${ty}"'`))
     .then(console.log)
@@ -50,9 +49,15 @@ const setEnvs = async (activeServers, {name, ty}) => {
     .then(() => exec(`heroku config:set -a ${name} RUST_CARGO_BUILD_FLAGS="--release --features ${ty.toLowerCase()}"`))
     .then(console.log)
     .then(() => {
+        return exec(`heroku config:set -a ${name} SENDGRID_KEY=${SENDGRID_KEY}`)
+    })
+    .then(console.log)
+    .then(() => {
         switch (ty) {
             case 'Email':
-                return exec(`heroku config:set -a ${name} SENDGRID_KEY=${SENDGRID_KEY}`)
+                return
+            case 'QA':
+                return
             default:
                 throw Error("Unimplemented")
         } 
@@ -64,9 +69,9 @@ const main = async () => {
     await Promise.all(apps.map((server) => {
         return (async () => {
             try {
-                await createNewApp(server.name, stage)
+                await createNewApp(server, stage)
             } catch (e) {
-                console.log(`Did not create a new app: ${server.name}, Maybe it already existed`)
+                console.log(`Did not create a new app: ${server.name}, Maybe it already existed: ${e}`)
             }
             
         })()
@@ -74,7 +79,7 @@ const main = async () => {
 
     const activeServers = await getActiveServers()
 
-    await Promise.all(apps.map(server => setEnvs(activeServers, server)))
+    await Promise.all(apps.map(server => setEnvs(activeServers, server, stage)))
 
     console.log("Completed ✅")
 }

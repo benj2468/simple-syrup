@@ -1,76 +1,156 @@
+
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
-use syn::parse_macro_input;
-use syn::AttributeArgs;
-use syn::Meta;
-use syn::NestedMeta;
-use syn::{Data, DeriveInput, Field};
+use syn::{parse_macro_input, Attribute, AttributeArgs, Ident, Meta, NestedMeta, Data, DeriveInput, Field};
 
 mod server;
+mod tests;
 
+#[derive(Debug)]
+pub(crate) enum DataStorage {
+    Ignored,
+    Hashed,
+    Stored,
+}
+
+#[derive(Debug)]
+pub(crate) struct DerivedRequest {
+    idents: Idents,
+    data_storage_ty: DataStorage,
+}
+
+#[derive(Debug)]
+pub(crate) struct Idents {
+    base: Ident,
+    request_register: Ident,
+    verify_register: Ident,
+    request_auth: Ident,
+    verify_auth: Ident,
+}
+
+#[derive(Debug)]
 pub(crate) struct DeriveData {
     pub(crate) ident: Ident,
-    pub(crate) req_ident: Ident,
+    pub(crate) sub_attrs: Vec<Attribute>,
     pub(crate) fields: Vec<Field>,
+    pub(crate) request: DerivedRequest,
+    pub(crate) server_ty: NestedMeta,
 }
 
 impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
     fn from(tokens: (Vec<NestedMeta>, TokenStream)) -> Self {
         let (args, tok) = tokens;
-        let DeriveInput { data, ident, .. } = syn::parse(tok).unwrap();
+        let DeriveInput {
+            data, ident, attrs, ..
+        } = syn::parse(tok).unwrap();
 
-        let fields: Vec<Field> = match data {
+        let fields = match data {
             Data::Struct(data) => data.fields.into_iter().collect(),
             _ => unimplemented!("DeriveData is only for a struct"),
         };
 
-        let req_ident = match args
-            .get(0)
-            .expect("First argument must be the request structure")
-        {
-            NestedMeta::Meta(m) => match m {
-                Meta::Path(p) => {
-                    let seg = p
-                        .segments
-                        .iter()
-                        .next()
-                        .expect("Must have at least one segment");
-                    seg.ident.clone()
+        let mut data: Option<Ident> = None;
+        let mut store: Option<DataStorage> = None;
+        let mut ty: Option<NestedMeta> = None;
+
+        args.iter().for_each(|v| match v {
+            NestedMeta::Meta(meta) => {
+                let name = meta.path().get_ident().unwrap();
+                match name.to_string().as_str() {
+                    "data" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        data = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(meta) => meta.path().get_ident().unwrap().clone(),
+                        });
+                    }
+                    "store" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        store = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(meta) => {
+                                match meta.path().get_ident().unwrap().to_string().as_str() {
+                                    "Ignored" => DataStorage::Ignored,
+                                    "Hashed" => DataStorage::Hashed,
+                                    "Stored" => DataStorage::Stored,
+                                    _ => unimplemented!("That period is not supported (support: Ignored, Hashed, Stored)"),
+                                }
+                            }
+                        });
+                    }
+                    "ty" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        ty = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(_) => nested.clone() 
+                        });
+                    }
+                    _ => unimplemented!(),
                 }
-                Meta::List(_) => unimplemented!(),
-                Meta::NameValue(_) => unimplemented!(),
-            },
+            }
             _ => unimplemented!(),
+        });
+
+        let request_register = Ident::new(&format!("{}RegisterReq", ident), ident.span());
+        let verify_register = Ident::new(&format!("{}VerifyRegisterReq", ident), ident.span());
+        let request_auth = Ident::new(&format!("{}AuthReq", ident), ident.span());
+        let verify_auth = Ident::new(&format!("{}VerifyAuthReq", ident), ident.span());
+
+        let idents = Idents {
+            base: data.expect("Must provide a Request Data Type!"),
+            request_register,
+            verify_register,
+            request_auth,
+            verify_auth,
+        };
+
+        let request = DerivedRequest {
+            idents,
+            data_storage_ty: store.expect("Must provide a Data Storage Type!"),
         };
 
         Self {
             fields,
-            req_ident,
+            sub_attrs: attrs,
             ident,
-        }
-    }
-}
-
-impl From<DeriveData> for TokenStream2 {
-    fn from(data: DeriveData) -> Self {
-        let DeriveData { ident, fields, .. } = data;
-        quote! {
-            pub struct #ident {
-                pub pool: sqlx::Pool<sqlx::Postgres>,
-                #(#fields,)*
-            }
+            request,
+            server_ty: ty.expect("Must provide a Server Type!"),
         }
     }
 }
 
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
-pub fn AuthServer(attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
-    server::derive((args, input).into()).into()
-}
+    let derived = (args, input).into();
+    let server = server::derive(&derived);
 
-// #[cfg(test)]
-// mod test;
+    let tests = tests::derive(&derived);
+
+    let re_struct: TokenStream2 = derived.into();
+
+    quote::quote! {
+        #re_struct
+
+        #server
+
+        #tests
+    }
+    .into()
+}
