@@ -63,6 +63,7 @@ impl BaseAuthenticator {
             }
         }
     }
+    #[cfg(not(test))]
     async fn send_email(
         &self,
         email: &str,
@@ -80,6 +81,11 @@ impl BaseAuthenticator {
             .add_text(&body);
 
         self.sg_client.send(message).await
+    }
+
+    #[cfg(test)]
+    async fn send_email(&self, email: &str, otp: &str) -> Result<(), String> {
+        Ok(())
     }
 
     pub fn verify(id: &str, otp: &str) -> bool {
