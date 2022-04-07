@@ -35,7 +35,44 @@ pub struct Config {
 }
 
 impl Config {
-    pub async fn new() -> Config {
+    #[cfg(test)]
+    pub(crate) async fn test(server_ty: ServerType) -> Self {
+        let active_server = ServerPublicData {
+            server_ty,
+            url: "https://server.test:8080".into(),
+        };
+
+        let database = db::new_pool(&DBOptions {
+            uri: format!("postgres://localhost:5432/cpasstest_{:?}", server_ty).to_lowercase(),
+        })
+        .await
+        .expect("Could not connect to test pool");
+
+        sqlx::migrate!()
+            .run(&database)
+            .await
+            .expect("Could not perform db migrations");
+
+        sqlx::query!("DELETE FROM authenticated")
+            .execute(&database)
+            .await
+            .expect("Error clearing database");
+
+        let server = Server {
+            _dev_port: 0000,
+            database,
+            server_ty,
+        };
+
+        Self {
+            server,
+            host: "".into(),
+            port: 0,
+            active_servers: vec![active_server],
+        }
+    }
+
+    pub async fn new() -> Self {
         let port: u32 = std::env::var("PORT")
             .expect("Must supply PORT")
             .parse()
@@ -62,7 +99,7 @@ impl Config {
             _dev_port: port,
         };
 
-        Config {
+        Self {
             host,
             server,
             port,

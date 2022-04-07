@@ -88,19 +88,28 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
 
             let email = &request.email;
 
-            if let Some(e) = authenticator.authenticate(email).await { return e }
+            let auth_data = authenticator.authenticate(email).await;
+            if (!cfg!(test)) {
+                if let Some(e) = auth_data { return e };
+            };
 
             sqlx::query!(
-                "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4;",
+                "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4 RETURNING id;",
                 BaseAuthenticator::hash(email),
                 VerificationStatus::RequestAuth as VerificationStatus,
                 VerificationStatus::Verified as VerificationStatus,
                 VerificationStatus::RequestAuth as VerificationStatus
             )
-                .execute(&authenticator.base.pool)
+                .fetch_one(&authenticator.base.pool)
                 .await
-                .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
-                .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
+                .map(|_| {
+                    if (cfg!(test)) {
+                        auth_data.unwrap()
+                    } else {
+                        actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
+                    }
+                })
+                .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
         }
     }
 }
@@ -131,7 +140,7 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
                         .await
                         .map(|rec| rec.secret_component)
                         .map(|s: Option<String>| actix_web::HttpResponseBuilder::new(StatusCode::OK).json(s))
-                        .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
+                        .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
                 }
             }
         }
@@ -232,8 +241,14 @@ pub(crate) fn derive_req(input: &DeriveData) -> TokenStream2 {
 
 impl From<DeriveData> for TokenStream2 {
     fn from(data: DeriveData) -> Self {
-        let DeriveData { ident, fields, .. } = data;
+        let DeriveData {
+            ident,
+            fields,
+            sub_attrs,
+            ..
+        } = data;
         quote! {
+            #(#sub_attrs)*
             pub struct #ident {
                 pub base: super::base::BaseAuthenticator,
                 #(#fields,)*
@@ -242,23 +257,19 @@ impl From<DeriveData> for TokenStream2 {
     }
 }
 
-pub(crate) fn derive(input: DeriveData) -> TokenStream2 {
-    let register = derive_register(&input);
-    let ver_register = derive_register_verify(&input);
-    let auth = derive_authenticate(&input);
-    let ver_auth = derive_verify_authentication(&input);
-    let meta_data = derive_meta(&input);
-    let status = derive_status(&input);
+pub(crate) fn derive(input: &DeriveData) -> TokenStream2 {
+    let register = derive_register(input);
+    let ver_register = derive_register_verify(input);
+    let auth = derive_authenticate(input);
+    let ver_auth = derive_verify_authentication(input);
+    let meta_data = derive_meta(input);
+    let status = derive_status(input);
 
-    let request_structures = derive_req(&input);
-
-    let re_struct: TokenStream2 = input.into();
+    let request_structures = derive_req(input);
 
     quote! {
 
         #request_structures
-
-        #re_struct
 
         #meta_data
 

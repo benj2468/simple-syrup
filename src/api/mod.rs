@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, web, HttpRequest, HttpResponse, HttpResponseBuilder, Responder};
 use async_trait::async_trait;
+use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 
 // Need to figure out how to get this working...
@@ -28,7 +29,11 @@ pub trait AuthenticatorServer {
     /// For other servers, such as QA, authentication is redundant.
     /// Authentication only is required when the server must send data to the user to verify identity, such as OTP.
     async fn authenticate(&self, _email: &str) -> Option<HttpResponse> {
-        None
+        if cfg!(test) {
+            Some(HttpResponseBuilder::new(StatusCode::OK).json(""))
+        } else {
+            None
+        }
     }
 
     /// Verify that the user is who they say they are.
@@ -37,6 +42,10 @@ pub trait AuthenticatorServer {
     ///
     /// Any API call to a 3rd party would happen here (faceID, etc.)
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse>;
+}
+
+pub trait ServerData: Default + Serialize {
+    fn bad_data() -> Self;
 }
 
 #[get("/")]

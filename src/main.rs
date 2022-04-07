@@ -9,18 +9,19 @@ mod auth;
 mod config;
 mod db;
 
-macro_rules! build_app {
+macro_rules! build_app_ty {
     ($app:ident, $mod:ident, $pool:ident) => {
-        $app.app_data(api::$mod::server_builder($pool.clone()))
-            .service(api::index)
-            .service(api::$mod::server_ty)
-            .service(api::$mod::register)
-            .service(api::$mod::register_check)
-            .service(api::$mod::auth)
-            .service(api::$mod::auth_check)
-            .service(api::$mod::status_check)
+        $app.app_data(crate::api::$mod::server_builder($pool.clone()))
+            .service(crate::api::index)
+            .service(crate::api::$mod::server_ty)
+            .service(crate::api::$mod::register)
+            .service(crate::api::$mod::register_check)
+            .service(crate::api::$mod::auth)
+            .service(crate::api::$mod::auth_check)
+            .service(crate::api::$mod::status_check)
     };
 }
+pub(crate) use build_app_ty;
 
 async fn root_server(root: Config) -> std::io::Result<()> {
     let Config {
@@ -63,11 +64,11 @@ async fn root_server(root: Config) -> std::io::Result<()> {
 
         match server_ty {
             #[cfg(feature = "email")]
-            config::ServerType::Email => build_app!(app, email, database),
+            config::ServerType::Email => build_app_ty!(app, email, database),
             #[cfg(feature = "qa")]
-            config::ServerType::QA => build_app!(app, qa, database),
+            config::ServerType::QA => build_app_ty!(app, qa, database),
             #[cfg(feature = "password")]
-            config::ServerType::Password => build_app!(app, password, database),
+            config::ServerType::Password => build_app_ty!(app, password, database),
             #[allow(unreachable_patterns)]
             _ => app,
         }
@@ -88,3 +89,6 @@ async fn main() -> std::io::Result<()> {
 
     root_server(config).await
 }
+
+#[cfg(test)]
+mod test;

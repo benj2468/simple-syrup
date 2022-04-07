@@ -1,24 +1,25 @@
+
 use proc_macro::TokenStream;
-use syn::parse_macro_input;
-use syn::AttributeArgs;
-use syn::Ident;
-use syn::Meta;
-use syn::NestedMeta;
-use syn::{Data, DeriveInput, Field};
+use proc_macro2::TokenStream as TokenStream2;
+use syn::{parse_macro_input, Attribute, AttributeArgs, Ident, Meta, NestedMeta, Data, DeriveInput, Field};
 
 mod server;
+mod tests;
 
+#[derive(Debug)]
 pub(crate) enum DataStorage {
     Ignored,
     Hashed,
     Stored,
 }
 
+#[derive(Debug)]
 pub(crate) struct DerivedRequest {
     idents: Idents,
     data_storage_ty: DataStorage,
 }
 
+#[derive(Debug)]
 pub(crate) struct Idents {
     base: Ident,
     request_register: Ident,
@@ -27,41 +28,83 @@ pub(crate) struct Idents {
     verify_auth: Ident,
 }
 
+#[derive(Debug)]
 pub(crate) struct DeriveData {
     pub(crate) ident: Ident,
-    pub(crate) attrs: Vec<Ident>,
+    pub(crate) sub_attrs: Vec<Attribute>,
     pub(crate) fields: Vec<Field>,
     pub(crate) request: DerivedRequest,
+    pub(crate) server_ty: NestedMeta,
 }
 
 impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
     fn from(tokens: (Vec<NestedMeta>, TokenStream)) -> Self {
         let (args, tok) = tokens;
-        let DeriveInput { data, ident, .. } = syn::parse(tok).unwrap();
+        let DeriveInput {
+            data, ident, attrs, ..
+        } = syn::parse(tok).unwrap();
 
         let fields = match data {
             Data::Struct(data) => data.fields.into_iter().collect(),
             _ => unimplemented!("DeriveData is only for a struct"),
         };
 
-        let attrs: Vec<_> = args
-            .iter()
-            .map(|v| match v {
-                NestedMeta::Meta(m) => match m {
-                    Meta::Path(p) => {
-                        let seg = p
-                            .segments
-                            .iter()
-                            .next()
-                            .expect("Must have at least one segment");
-                        seg.ident.clone()
+        let mut data: Option<Ident> = None;
+        let mut store: Option<DataStorage> = None;
+        let mut ty: Option<NestedMeta> = None;
+
+        args.iter().for_each(|v| match v {
+            NestedMeta::Meta(meta) => {
+                let name = meta.path().get_ident().unwrap();
+                match name.to_string().as_str() {
+                    "data" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        data = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(meta) => meta.path().get_ident().unwrap().clone(),
+                        });
                     }
-                    Meta::List(_) => unimplemented!(),
-                    Meta::NameValue(_) => unimplemented!(),
-                },
-                _ => unimplemented!(),
-            })
-            .collect();
+                    "store" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        store = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(meta) => {
+                                match meta.path().get_ident().unwrap().to_string().as_str() {
+                                    "Ignored" => DataStorage::Ignored,
+                                    "Hashed" => DataStorage::Hashed,
+                                    "Stored" => DataStorage::Stored,
+                                    _ => unimplemented!("That period is not supported (support: Ignored, Hashed, Stored)"),
+                                }
+                            }
+                        });
+                    }
+                    "ty" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        ty = first.map(|nested| match nested {
+                            NestedMeta::Lit(_) => panic!("data must be an identifier"),
+                            NestedMeta::Meta(_) => nested.clone() 
+                        });
+                    }
+                    _ => unimplemented!(),
+                }
+            }
+            _ => unimplemented!(),
+        });
 
         let request_register = Ident::new(&format!("{}RegisterReq", ident), ident.span());
         let verify_register = Ident::new(&format!("{}VerifyRegisterReq", ident), ident.span());
@@ -69,10 +112,7 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
         let verify_auth = Ident::new(&format!("{}VerifyAuthReq", ident), ident.span());
 
         let idents = Idents {
-            base: attrs
-                .get(0)
-                .expect("Must provide a Request Data Type!")
-                .clone(),
+            base: data.expect("Must provide a Request Data Type!"),
             request_register,
             verify_register,
             request_auth,
@@ -81,24 +121,15 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
 
         let request = DerivedRequest {
             idents,
-            data_storage_ty: match attrs.get(1) {
-                Some(id) => match id.to_string().as_str() {
-                    "Ignored" => DataStorage::Ignored,
-                    "Hashed" => DataStorage::Hashed,
-                    "Stored" => DataStorage::Stored,
-                    _ => unimplemented!(
-                        "That period is not supported (support: Ignored, Hashed, Stored)"
-                    ),
-                },
-                None => DataStorage::Stored,
-            },
+            data_storage_ty: store.expect("Must provide a Data Storage Type!"),
         };
 
         Self {
             fields,
-            attrs,
+            sub_attrs: attrs,
             ident,
             request,
+            server_ty: ty.expect("Must provide a Server Type!"),
         }
     }
 }
@@ -107,7 +138,19 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
 #[allow(non_snake_case)]
 pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
-    server::derive((args, input).into()).into()
+    let derived = (args, input).into();
+    let server = server::derive(&derived);
+
+    let tests = tests::derive(&derived);
+
+    let re_struct: TokenStream2 = derived.into();
+
+    quote::quote! {
+        #re_struct
+
+        #server
+
+        #tests
+    }
+    .into()
 }
-// #[cfg(test)]
-// mod test;

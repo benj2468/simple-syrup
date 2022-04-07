@@ -89,6 +89,27 @@ impl BaseAuthenticator {
         totp.check(otp, time)
     }
 
+    pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
+        let totp = TOTP::new(totp_rs::Algorithm::SHA1, 6, 1, 30, id);
+        let time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let otp = totp.generate(time);
+
+        if cfg!(test) {
+            Some(actix_web::HttpResponseBuilder::new(StatusCode::OK).json(otp))
+        } else {
+            self.send_email(email, &otp)
+                .await
+                .map_err(|e| {
+                    actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())
+                })
+                .err()
+        }
+    }
+
     pub async fn verify_register(
         &self,
         email: &str,
@@ -105,23 +126,6 @@ impl BaseAuthenticator {
                     .await
                     .map_err(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
                     .err()
-    }
-
-    pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
-        let totp = TOTP::new(totp_rs::Algorithm::SHA1, 6, 1, 30, id);
-        let time = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        let otp = totp.generate(time);
-
-        self.send_email(email, &otp)
-            .await
-            .map_err(|e| {
-                actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())
-            })
-            .err()
     }
 
     pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
