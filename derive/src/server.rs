@@ -104,7 +104,7 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
                 .fetch_one(&authenticator.base.pool)
                 .await
                 .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
-                .or_test_default(auth_data.unwrap())
+                .or_test_default_else(|| auth_data.unwrap())
                 .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
         }
     }
@@ -163,7 +163,7 @@ pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
                 .bind(BaseAuthenticator::hash(&email))
                 .fetch_one(&authenticator.base.pool)
                 .await
-                .map(|row| row.try_get("status").unwrap())
+                .map(|row| row.try_get("status").expect("Could not get status field"))
                 .map(|s: VerificationStatus| actix_web::HttpResponseBuilder::new(StatusCode::OK).json(s))
                 .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
         }

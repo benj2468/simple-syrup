@@ -69,6 +69,8 @@ async fn root_server(root: Config) -> std::io::Result<()> {
             config::ServerType::QA => build_app_ty!(app, qa, database),
             #[cfg(feature = "password")]
             config::ServerType::Password => build_app_ty!(app, password, database),
+            #[cfg(feature = "biometric")]
+            config::ServerType::Biometric => build_app_ty!(app, biometric, database),
             #[allow(unreachable_patterns)]
             _ => app,
         }

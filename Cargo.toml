@@ -5,10 +5,11 @@ edition = "2018"
 build = "build.rs"
 
 [features]
-default = ["email", "qa", "password"]
+default = ["email", "qa", "password", "biometric"]
 email = []
 qa = []
 password = []
+biometric = []
 
 [build-dependencies]
 sqlx = "0.5.10"
@@ -39,6 +40,7 @@ itertools = "0.10.3"
 actix-web-httpauth = "0.6.0"
 alcoholic_jwt = "1.0.1"
 reqwest = "0.11.9"
+tracing = "0.1.32"
 
 
 [workspace]
