@@ -12,6 +12,8 @@ pub(crate) enum ServerType {
     QA,
     #[cfg(feature = "password")]
     Password,
+    #[cfg(feature = "biometric")]
+    Biometric,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
