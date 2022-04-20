@@ -171,12 +171,12 @@ pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
 }
 
 pub(crate) fn derive_meta(input: &DeriveData) -> TokenStream2 {
-    let server_ty = input.ident.to_string();
+    let server_ty = &input.server_ty;
 
     quote! {
         #[actix_web::get("/ty")]
         pub async fn server_ty(req: actix_web::HttpRequest) -> impl actix_web::Responder {
-            actix_web::HttpResponseBuilder::new(StatusCode::OK).json(#server_ty)
+            actix_web::HttpResponseBuilder::new(StatusCode::OK).json(serde_json::to_value(#server_ty).unwrap())
         }
     }
 }

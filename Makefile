@@ -18,4 +18,4 @@ deploy:
 	node deploy.js
 
 local:
-	SERVER_TY=\"Biometric\" ACTIVE_SERVERS=["{\"server_ty\": \"Biometric\", \"url\": \"http://127.0.0.1:8080\"}"] cargo run --features biometric
+	SERVER_TY=\"QA\" ACTIVE_SERVERS=["{\"server_ty\": \"QA\", \"url\": \"http://127.0.0.1:8080\"}"] cargo run --features qa
