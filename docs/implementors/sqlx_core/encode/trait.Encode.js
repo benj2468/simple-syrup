@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["simple_syrup"] = [{"text":"impl&lt;'q, DB:&nbsp;Database&gt; Encode&lt;'q, DB&gt; for <a class=\"enum\" href=\"simple_syrup/api/enum.VerificationStatus.html\" title=\"enum simple_syrup::api::VerificationStatus\">VerificationStatus</a> <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;'q <a class=\"primitive\" href=\"https://doc.rust-lang.org/1.59.0/std/primitive.str.html\">str</a>: Encode&lt;'q, DB&gt;,&nbsp;</span>","synthetic":false,"types":["simple_syrup::api::VerificationStatus"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

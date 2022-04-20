@@ -42,7 +42,7 @@ impl BaseAuthenticator {
             "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id",
             Self::hash(email),
             &sec,
-            serde_json::to_value(data).unwrap(),
+            serde_json::to_value(data).expect("Could not serialize data"),
         )
         .fetch_one(&self.pool)
         .await
@@ -84,7 +84,7 @@ impl BaseAuthenticator {
     }
 
     #[cfg(test)]
-    async fn send_email(&self, email: &str, otp: &str) -> Result<(), String> {
+    async fn send_email(&self, _email: &str, _otp: &str) -> Result<(), String> {
         Ok(())
     }
 

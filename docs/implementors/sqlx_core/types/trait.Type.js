@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["simple_syrup"] = [{"text":"impl Type&lt;Postgres&gt; for <a class=\"enum\" href=\"simple_syrup/api/enum.VerificationStatus.html\" title=\"enum simple_syrup::api::VerificationStatus\">VerificationStatus</a>","synthetic":false,"types":["simple_syrup::api::VerificationStatus"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

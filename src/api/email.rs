@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use derive::PassServer;
 use sqlx::PgPool;
 
-use super::{base::BaseAuthenticator, AuthenticatorServer, ServerData, VerificationStatus};
+use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
 use actix_web::HttpResponse;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -10,11 +10,6 @@ use serde::{Deserialize, Serialize};
 #[PassServer(data(String), store(Ignored), ty(crate::config::ServerType::Email))]
 pub struct EmailAuthenticator {}
 
-impl ServerData for String {
-    fn bad_data() -> String {
-        "Bad data".to_string()
-    }
-}
 
 #[async_trait]
 impl AuthenticatorServer for EmailAuthenticator {
@@ -27,7 +22,6 @@ impl AuthenticatorServer for EmailAuthenticator {
                 return Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
             }
         };
-
         self.base.register(&id.to_string(), email).await
     }
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse> {

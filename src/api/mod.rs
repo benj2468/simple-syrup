@@ -13,24 +13,31 @@ pub enum VerificationStatus {
     RequestAuth,
 }
 
-pub(crate) trait TestDefault<T> {
-    fn or_test_default(self, default: T) -> Self;
+
+pub(crate) trait TestDefault<F, T> {
+    fn or_test_default_else(self, default: F) -> Self;
 }
 
-impl<T> TestDefault<T> for Option<T> {
-    fn or_test_default(self, default: T) -> Option<T> {
+impl<F, T> TestDefault<F, T> for Option<T>
+where
+    F: FnOnce() -> T,
+{
+    fn or_test_default_else(self, default: F) -> Option<T> {
         if cfg!(test) {
-            Some(default)
+            Some(default())
         } else {
             self
         }
     }
 }
 
-impl<T, E> TestDefault<T> for Result<T, E> {
-    fn or_test_default(self, default: T) -> Result<T, E> {
+impl<F, T, E> TestDefault<F, T> for Result<T, E>
+where
+    F: FnOnce() -> T,
+{
+    fn or_test_default_else(self, default: F) -> Result<T, E> {
         if cfg!(test) {
-            self.map(|_| default)
+            self.map(|_| default())
         } else {
             self
         }
@@ -53,7 +60,7 @@ pub trait AuthenticatorServer {
     /// For other servers, such as QA, authentication is redundant.
     /// Authentication only is required when the server must send data to the user to verify identity, such as OTP.
     async fn authenticate(&self, _email: &str) -> Option<HttpResponse> {
-        None.or_test_default(HttpResponseBuilder::new(StatusCode::OK).json(""))
+        None.or_test_default_else(|| HttpResponseBuilder::new(StatusCode::OK).json(""))
     }
 
     /// Verify that the user is who they say they are.
@@ -62,10 +69,15 @@ pub trait AuthenticatorServer {
     ///
     /// Any API call to a 3rd party would happen here (faceID, etc.)
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse>;
-}
 
 pub trait ServerData: Default + Serialize {
     fn bad_data() -> Self;
+}
+
+impl ServerData for String {
+    fn bad_data() -> String {
+        "Bad data".to_string()
+    }
 }
 
 #[get("/")]
@@ -83,3 +95,6 @@ pub mod qa;
 
 #[cfg(feature = "password")]
 pub mod password;
+
+#[cfg(feature = "biometric")]
+pub mod biometric;

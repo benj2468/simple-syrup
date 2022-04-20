@@ -58,6 +58,8 @@ const setEnvs = async (activeServers, {name, ty}, stage) => {
                 return
             case 'QA':
                 return
+            case 'Biometric':
+                return
             default:
                 throw Error("Unimplemented")
         } 

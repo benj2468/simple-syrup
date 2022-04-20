@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["simple_syrup"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.59.0/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"simple_syrup/config/enum.ServerType.html\" title=\"enum simple_syrup::config::ServerType\">ServerType</a>","synthetic":false,"types":["simple_syrup::config::ServerType"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

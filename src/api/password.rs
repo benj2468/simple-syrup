@@ -47,7 +47,7 @@ impl AuthenticatorServer for PasswordAuthenticator {
 
         sqlx::query!(
             "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data = $4 RETURNING id;",
-            email,
+            BaseAuthenticator::hash(email),
             VerificationStatus::Verified as VerificationStatus,
             VerificationStatus::RequestAuth as VerificationStatus,
             data
