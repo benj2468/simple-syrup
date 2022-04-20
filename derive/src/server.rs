@@ -80,38 +80,34 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
     let req_ident = &request.idents.request_auth;
 
     quote! {
-            #[actix_web::post("/authenticate")]
-            pub async fn auth(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
-                use crate::api::TestDefault;
-                let authenticator = req.app_data::<#ident>().unwrap();
+        #[actix_web::post("/authenticate")]
+        pub async fn auth(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
+            use crate::api::TestDefault;
+            let authenticator = req.app_data::<#ident>().unwrap();
 
-                let request = request.0;
+            let request = request.0;
 
-                let email = &request.email;
+            let email = &request.email;
 
-                let auth_data = authenticator.authenticate(email).await;
-                if (!cfg!(test)) {
-                    if let Some(e) = auth_data { return e };
-                };
+            let auth_data = authenticator.authenticate(email).await;
+            if (!cfg!(test)) {
+                if let Some(e) = auth_data { return e };
+            };
 
-                sqlx::query!(
-                    "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4 RETURNING id;",
-                    BaseAuthenticator::hash(email),
-                    VerificationStatus::RequestAuth as VerificationStatus,
-                    VerificationStatus::Verified as VerificationStatus,
-                    VerificationStatus::RequestAuth as VerificationStatus
-                )
-                    .fetch_one(&authenticator.base.pool)
-                    .await
-                    .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
-    <<<<<<< HEAD
-                    .or_test_default(auth_data.unwrap())
-    =======
-                    .or_test_default_else(|| auth_data.unwrap())
-    >>>>>>> origin/main
-                    .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
-            }
+            sqlx::query!(
+                "UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 OR status=$4 RETURNING id;",
+                BaseAuthenticator::hash(email),
+                VerificationStatus::RequestAuth as VerificationStatus,
+                VerificationStatus::Verified as VerificationStatus,
+                VerificationStatus::RequestAuth as VerificationStatus
+            )
+                .fetch_one(&authenticator.base.pool)
+                .await
+                .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
+                .or_test_default_else(|| auth_data.unwrap())
+                .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
         }
+    }
 }
 
 pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {

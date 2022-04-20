@@ -1,3 +1,4 @@
 {
   "cSpell.words": ["Idents"],
+  "rust-analyzer.cargo.allFeatures": true
 }

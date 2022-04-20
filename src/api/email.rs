@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 #[PassServer(data(String), store(Ignored), ty(crate::config::ServerType::Email))]
 pub struct EmailAuthenticator {}
 
-
 #[async_trait]
 impl AuthenticatorServer for EmailAuthenticator {
     type Data = String;

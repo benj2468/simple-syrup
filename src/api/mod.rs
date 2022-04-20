@@ -13,7 +13,6 @@ pub enum VerificationStatus {
     RequestAuth,
 }
 
-
 pub(crate) trait TestDefault<F, T> {
     fn or_test_default_else(self, default: F) -> Self;
 }
@@ -69,6 +68,7 @@ pub trait AuthenticatorServer {
     ///
     /// Any API call to a 3rd party would happen here (faceID, etc.)
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse>;
+}
 
 pub trait ServerData: Default + Serialize {
     fn bad_data() -> Self;
