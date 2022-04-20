@@ -1,7 +1,7 @@
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{parse_macro_input, Attribute, AttributeArgs, Ident, Meta, NestedMeta, Data, DeriveInput, Field};
+use syn::{parse_macro_input, Attribute, AttributeArgs, Ident, Meta, NestedMeta, Data, DeriveInput, Field, Lit};
 
 mod server;
 mod tests;
@@ -35,6 +35,7 @@ pub(crate) struct DeriveData {
     pub(crate) fields: Vec<Field>,
     pub(crate) request: DerivedRequest,
     pub(crate) server_ty: NestedMeta,
+    pub(crate) ignore_tests: bool,
 }
 
 impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
@@ -52,6 +53,7 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
         let mut data: Option<Ident> = None;
         let mut store: Option<DataStorage> = None;
         let mut ty: Option<NestedMeta> = None;
+        let mut ignore_tests: bool = false;
 
         args.iter().for_each(|v| match v {
             NestedMeta::Meta(meta) => {
@@ -99,6 +101,25 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
                             NestedMeta::Lit(_) => panic!("data must be an identifier"),
                             NestedMeta::Meta(_) => nested.clone() 
                         });
+                    },
+                    "ignore_tests" => {
+                        let nested = match meta {
+                            Meta::List(list) => &list.nested,
+                            _ => panic!("data must be a list"),
+                        };
+
+                        let first = nested.first();
+                        ignore_tests = first.map(|f| {
+                            match f {
+                                NestedMeta::Lit(bool) => {
+                                    match bool {
+                                        Lit::Bool(v) => v.value,
+                                        _ => panic!("data must be a bool"),
+                                    }
+                                },
+                                _ => panic!("data must be a bool literal"),
+                            }
+                        }).unwrap_or_default();
                     }
                     _ => unimplemented!(),
                 }
@@ -130,6 +151,7 @@ impl From<(Vec<NestedMeta>, TokenStream)> for DeriveData {
             ident,
             request,
             server_ty: ty.expect("Must provide a Server Type!"),
+            ignore_tests
         }
     }
 }
@@ -141,7 +163,11 @@ pub fn PassServer(attr: TokenStream, input: TokenStream) -> TokenStream {
     let derived = (args, input).into();
     let server = server::derive(&derived);
 
-    let tests = tests::derive(&derived);
+    let tests = if derived.ignore_tests {
+        quote::quote!{}
+    } else {
+        tests::derive(&derived)
+    };
 
     let re_struct: TokenStream2 = derived.into();
 

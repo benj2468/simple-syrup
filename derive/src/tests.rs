@@ -186,6 +186,7 @@ pub(crate) fn derive(input: &DeriveData) -> TokenStream2 {
 
             #[actix_web::test]
             async fn bad_data_verify_authenticate() {
+                use crate::api::ServerData;
                 let app = crate::config::Config::test(#server_ty).await;
 
                 let secret = "foobar-test-email";

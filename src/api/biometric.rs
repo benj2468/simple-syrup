@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 #[PassServer(
     data(String), 
     store(Stored), 
-    ty(crate::config::ServerType::Biometric)
+    ty(crate::config::ServerType::Biometric),
+    ignore_tests(true)
 )]
 pub struct BiometricAuthenticator {
     pub(crate) api_url: String,

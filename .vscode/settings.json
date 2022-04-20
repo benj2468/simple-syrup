@@ -1,4 +1,5 @@
 {
   "cSpell.words": ["Idents"],
-  "rust-analyzer.cargo.allFeatures": true
+  "rust-analyzer.cargo.allFeatures": true,
+  "rust-analyzer.server.extraEnv": {"BUILD_ENABLED": "0"}
 }

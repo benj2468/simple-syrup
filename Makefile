@@ -1,7 +1,7 @@
 SERVER_TY=email
 
 test:
-	cargo test -- --test-threads=1
+	cargo test --all-features -- --test-threads=1 
 
 docs:
 	BUILD_ENABLED=0 cargo doc --no-deps
