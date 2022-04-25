@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["VerificationStatus",""]],"mod":[["base",""],["email",""],["password",""],["qa",""]],"struct":[["index",""]],"trait":[["AuthenticatorServer",""],["ServerData",""],["TestDefault",""]]});

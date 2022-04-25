@@ -21,7 +21,6 @@ impl AuthenticatorServer for EmailAuthenticator {
                 return Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
             }
         };
-
         self.base.register(&id.to_string(), email).await
     }
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse> {
