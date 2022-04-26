@@ -1,30 +1,58 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
+    str::FromStr,
     time::SystemTime,
 };
 
-use actix_web::HttpResponse;
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use hyper::StatusCode;
 use sqlx::{types::Uuid, PgPool};
 use totp_rs::TOTP;
+use web3::{transports::WebSocket, Web3};
 
 use crate::api::VerificationStatus;
+
+pub struct Web3Config {
+    account: web3::types::Address,
+    websocket_key: String,
+}
 
 pub struct BaseAuthenticator {
     #[cfg(not(test))]
     pub sg_client: sendgrid::SGClient,
     pub pool: sqlx::Pool<sqlx::Postgres>,
+    #[cfg(not(test))]
+    pub web3_config: Web3Config,
 }
 
 impl BaseAuthenticator {
     pub fn new(pool: PgPool) -> Self {
         #[cfg(not(test))]
         let my_secret_key = std::env::var("SENDGRID_KEY").expect("need SENDGRID_KEY to test");
+
+        #[cfg(not(test))]
+        let web3_config = {
+            let my_address = web3::types::Address::from_str(
+                &std::env::var("ETH_ADDRESS").expect("Must provide an address for this server!"),
+            )
+            .expect("Must provide a VIABLE address for this server");
+
+            let websocket_key =
+                std::env::var("INFURA_RINKEBY").expect("Must provide an INFURA_RINKEBY");
+
+            Web3Config {
+                account: my_address,
+                websocket_key,
+            }
+        };
+
         Self {
             #[cfg(not(test))]
             sg_client: sendgrid::SGClient::new(my_secret_key),
             pool,
+            #[cfg(not(test))]
+            web3_config,
         }
     }
 
@@ -167,5 +195,68 @@ impl BaseAuthenticator {
         .await
         .ok()
         .and_then(|rec| rec.id)
+    }
+}
+
+pub(crate) struct Handlers;
+
+impl Handlers {
+    async fn _build_web3_client(websocket_key: &str) -> Result<Web3<WebSocket>, HttpResponse> {
+        let ws = web3::transports::WebSocket::new(websocket_key)
+            .await
+            .map_err(|e| {
+                actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())
+            })?;
+
+        Ok(web3::Web3::new(ws))
+    }
+
+    pub(crate) async fn web2_handler(secret_component: Option<String>) -> Option<HttpResponse> {
+        Some(HttpResponseBuilder::new(StatusCode::OK).json(secret_component))
+    }
+
+    pub(crate) async fn web3_handler(
+        web3_config: Web3Config,
+        secret_component: Option<String>,
+        contract_address: String,
+    ) -> Option<HttpResponse> {
+        let Web3Config {
+            account,
+            websocket_key,
+        } = web3_config;
+
+        let web3 = match Self::_build_web3_client(&websocket_key).await {
+            Ok(web3) => web3,
+            Err(e) => return Some(e),
+        };
+
+        let contract = web3::contract::Contract::from_json(
+            web3.eth(),
+            web3::types::Address::from_str(&contract_address).unwrap(),
+            include_bytes!("../../contract/abi.json"),
+        );
+
+        if contract.is_err() {
+            return Some(
+                HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
+                    .json(contract.unwrap_err().to_string()),
+            );
+        }
+
+        let contract = contract.unwrap();
+
+        let res = contract
+            .call(
+                "contribute",
+                (secret_component.unwrap_or_default(),),
+                account,
+                web3::contract::Options::default(),
+            )
+            .await;
+
+        match res {
+            Ok(_) => None,
+            Err(e) => Some(HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())),
+        }
     }
 }
