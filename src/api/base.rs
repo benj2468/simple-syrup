@@ -1,14 +1,17 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    str::FromStr,
     time::SystemTime,
 };
+
+#[cfg(feature = "web3")]
+use std::str::FromStr;
 
 use actix_web::{HttpResponse, HttpResponseBuilder};
 use hyper::StatusCode;
 use sqlx::{types::Uuid, PgPool};
 use totp_rs::TOTP;
+#[cfg(feature = "web3")]
 use web3::{transports::WebSocket, Web3};
 
 use crate::api::VerificationStatus;
