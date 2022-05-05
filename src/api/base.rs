@@ -13,6 +13,7 @@ use web3::{transports::WebSocket, Web3};
 
 use crate::api::VerificationStatus;
 
+#[cfg(feature = "web3")]
 pub struct Web3Config {
     account: web3::types::Address,
     websocket_key: String,
@@ -23,6 +24,7 @@ pub struct BaseAuthenticator {
     pub sg_client: sendgrid::SGClient,
     pub pool: sqlx::Pool<sqlx::Postgres>,
     #[cfg(not(test))]
+    #[cfg(feature = "web3")]
     pub web3_config: Web3Config,
 }
 
@@ -32,6 +34,7 @@ impl BaseAuthenticator {
         let my_secret_key = std::env::var("SENDGRID_KEY").expect("need SENDGRID_KEY to test");
 
         #[cfg(not(test))]
+        #[cfg(feature = "web3")]
         let web3_config = {
             let my_address = web3::types::Address::from_str(
                 &std::env::var("ETH_ADDRESS").expect("Must provide an address for this server!"),
@@ -52,6 +55,7 @@ impl BaseAuthenticator {
             sg_client: sendgrid::SGClient::new(my_secret_key),
             pool,
             #[cfg(not(test))]
+            #[cfg(feature = "web3")]
             web3_config,
         }
     }
@@ -201,6 +205,7 @@ impl BaseAuthenticator {
 pub(crate) struct Handlers;
 
 impl Handlers {
+    #[cfg(feature = "web3")]
     async fn _build_web3_client(websocket_key: &str) -> Result<Web3<WebSocket>, HttpResponse> {
         let ws = web3::transports::WebSocket::new(websocket_key)
             .await
@@ -215,6 +220,7 @@ impl Handlers {
         Some(HttpResponseBuilder::new(StatusCode::OK).json(secret_component))
     }
 
+    #[cfg(feature = "web3")]
     pub(crate) async fn web3_handler(
         web3_config: Web3Config,
         secret_component: Option<String>,
