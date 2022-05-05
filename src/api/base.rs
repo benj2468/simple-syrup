@@ -1,14 +1,17 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    str::FromStr,
     time::SystemTime,
 };
+
+#[cfg(feature = "web3")]
+use std::str::FromStr;
 
 use actix_web::{HttpResponse, HttpResponseBuilder};
 use hyper::StatusCode;
 use sqlx::{types::Uuid, PgPool};
 use totp_rs::TOTP;
+#[cfg(feature = "web3")]
 use web3::{transports::WebSocket, Web3};
 
 use crate::api::VerificationStatus;
@@ -86,6 +89,7 @@ impl BaseAuthenticator {
                     .register(&id.to_string(), email)
                     .await
                     .unwrap_or_else(|| {
+                        tracing::info!("Requested Verification");
                         actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
                     }),
                 None => actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).finish(),
@@ -167,6 +171,10 @@ impl BaseAuthenticator {
                     .await
                     .map_err(|e| actix_web::HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string()))
                     .err()
+                    .map(|e| {
+                        tracing::info!("Successful Verification");
+                        e
+                    })
     }
 
     pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
@@ -217,6 +225,7 @@ impl Handlers {
     }
 
     pub(crate) async fn web2_handler(secret_component: Option<String>) -> Option<HttpResponse> {
+        tracing::info!(ty = "web2", "Successful authentication");
         Some(HttpResponseBuilder::new(StatusCode::OK).json(secret_component))
     }
 
@@ -264,5 +273,7 @@ impl Handlers {
             Ok(_) => None,
             Err(e) => Some(HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())),
         }
+
+        tracing::info!(ty = "web3", "Successful authentication");
     }
 }
