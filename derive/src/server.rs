@@ -29,7 +29,7 @@ pub(crate) fn derive_register(input: &DeriveData) -> TokenStream2 {
     quote! {
         #[actix_web::post("/register")]
         pub async fn register(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
-            let authenticator = req.app_data::<#ident>().unwrap();
+            let authenticator = req.app_data::<#ident>().expect("Could not unwrap Authenticator");
 
             let request = request.0;
 
@@ -51,7 +51,7 @@ pub(crate) fn derive_register_verify(input: &DeriveData) -> TokenStream2 {
     quote! {
         #[actix_web::post("/register/verify")]
         pub async fn register_check(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
-            let authenticator = req.app_data::<#ident>().unwrap();
+            let authenticator = req.app_data::<#ident>().expect("Could not unwrap Authenticator");
 
             let request = request.0;
 
@@ -83,7 +83,7 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
         #[actix_web::post("/authenticate")]
         pub async fn auth(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
             use crate::api::TestDefault;
-            let authenticator = req.app_data::<#ident>().unwrap();
+            let authenticator = req.app_data::<#ident>().expect("Could not unwrap Authenticator");
 
             let request = request.0;
 
@@ -118,7 +118,7 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
     quote! {
         #[actix_web::post("/authenticate/verify")]
         pub async fn auth_check(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
-            let authenticator = req.app_data::<#ident>().unwrap();
+            let authenticator = req.app_data::<#ident>().expect("Could not unwrap Authenticator");
 
             let request = request.0;
 
@@ -127,16 +127,22 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
             match authenticator.verify_authentication(email, &request.data).await {
                 Some(err) => err,
                 None => {
-                    sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;",
+                    let res = sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;",
                         BaseAuthenticator::hash(email),
                         VerificationStatus::Verified as VerificationStatus,
                         VerificationStatus::RequestAuth as VerificationStatus,
                     )
                         .fetch_one(&authenticator.base.pool)
                         .await
-                        .map(|rec| rec.secret_component)
-                        .map(|s: Option<String>| actix_web::HttpResponseBuilder::new(StatusCode::OK).json(s))
-                        .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
+                        .map(|rec| rec.secret_component);
+                    match res {
+                        Ok(secret) => {
+                            authenticator.secret_handler(secret)
+                                .await
+                                .unwrap_or_else(|| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
+                        },
+                        Err(e) => actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string())
+                    }
                 }
             }
         }
@@ -153,7 +159,7 @@ pub(crate) fn derive_status(input: &DeriveData) -> TokenStream2 {
         pub async fn status_check(req: actix_web::HttpRequest, request: actix_web::web::Json<#req_ident>) -> impl actix_web::Responder {
             use sqlx::Row;
 
-            let authenticator = req.app_data::<#ident>().unwrap();
+            let authenticator = req.app_data::<#ident>().expect("Could not unwrap Authenticator");
 
             let request = request.0;
 
