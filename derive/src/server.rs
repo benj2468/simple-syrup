@@ -103,7 +103,10 @@ pub(crate) fn derive_authenticate(input: &DeriveData) -> TokenStream2 {
             )
                 .fetch_one(&authenticator.base.pool)
                 .await
-                .map(|_| actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
+                .map(|_| {
+                    tracing::info!("Requested Authentication");
+                    actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
+                })
                 .or_test_default_else(|| auth_data.unwrap())
                 .unwrap_or_else(|e| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string()))
         }
