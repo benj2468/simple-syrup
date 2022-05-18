@@ -18,4 +18,4 @@ deploy:
 	node deploy.js
 
 local:
-	WEB3_HOST="ws://127.0.0.1:7545" ETH_ADDRESS=0xE246D524588888898A0567fAa898A775E86cBD89 SERVER_TY=\"Email\" ACTIVE_SERVERS="[{\"server_ty\": \"QA\", \"url\": \"http://127.0.0.1:8080\"}, {\"server_ty\": \"Email\", \"url\": \"http://127.0.0.1:8081\"}]" cargo run --features email --features web3 --features development
+	node localDeploy/index.js
