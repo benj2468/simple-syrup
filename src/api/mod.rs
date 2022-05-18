@@ -71,7 +71,17 @@ pub trait AuthenticatorServer {
     async fn verify_authentication(&self, email: &str, data: &Self::Data) -> Option<HttpResponse>;
 
     /// Handler for secret_component post authentication
+    #[cfg(not(feature = "web3"))]
     async fn secret_handler(&self, secret_component: Option<String>) -> Option<HttpResponse> {
+        Handlers::web2_handler(secret_component).await
+    }
+
+    #[cfg(feature = "web3")]
+    async fn secret_handler(
+        &self,
+        secret_component: Option<String>,
+        _addresses: (&str, &str),
+    ) -> Option<HttpResponse> {
         Handlers::web2_handler(secret_component).await
     }
 }

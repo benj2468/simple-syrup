@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use derive::PassServer;
 use sqlx::PgPool;
 
+use super::base::Handlers;
 use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
 use actix_web::HttpResponse;
 use hyper::StatusCode;
@@ -36,6 +37,22 @@ impl AuthenticatorServer for EmailAuthenticator {
         } else {
             Some(actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
         }
+    }
+
+    #[cfg(feature = "web3")]
+    async fn secret_handler(
+        &self,
+        secret_component: Option<String>,
+        addresses: (&str, &str),
+    ) -> Option<HttpResponse> {
+        println!(" In Secret Handler {:?}", secret_component);
+        Handlers::web3_handler(
+            &self.base.web3_config,
+            secret_component,
+            addresses.0,
+            addresses.1,
+        )
+        .await
     }
 }
 

@@ -5,11 +5,14 @@ edition = "2018"
 build = "build.rs"
 
 [features]
+test = ["email", "qa", "password", "biometric"]
 default = []
 email = []
 qa = []
 password = []
 biometric = []
+web3 = []
+development = []
 
 [build-dependencies]
 sqlx = "0.5.10"

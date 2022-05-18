@@ -26,7 +26,6 @@ pub struct BaseAuthenticator {
     #[cfg(not(test))]
     pub sg_client: sendgrid::SGClient,
     pub pool: sqlx::Pool<sqlx::Postgres>,
-    #[cfg(not(test))]
     #[cfg(feature = "web3")]
     pub web3_config: Web3Config,
 }
@@ -36,7 +35,6 @@ impl BaseAuthenticator {
         #[cfg(not(test))]
         let my_secret_key = std::env::var("SENDGRID_KEY").expect("need SENDGRID_KEY to test");
 
-        #[cfg(not(test))]
         #[cfg(feature = "web3")]
         let web3_config = {
             let my_address = web3::types::Address::from_str(
@@ -44,8 +42,7 @@ impl BaseAuthenticator {
             )
             .expect("Must provide a VIABLE address for this server");
 
-            let websocket_key =
-                std::env::var("INFURA_RINKEBY").expect("Must provide an INFURA_RINKEBY");
+            let websocket_key = std::env::var("WEB3_HOST").expect("Must provide a WEB3_HOST");
 
             Web3Config {
                 account: my_address,
@@ -57,7 +54,6 @@ impl BaseAuthenticator {
             #[cfg(not(test))]
             sg_client: sendgrid::SGClient::new(my_secret_key),
             pool,
-            #[cfg(not(test))]
             #[cfg(feature = "web3")]
             web3_config,
         }
@@ -69,15 +65,27 @@ impl BaseAuthenticator {
         hasher.finish().to_string()
     }
 
-    pub async fn prepare<T>(&self, email: &str, sec: &str, data: &T) -> HttpResponse
+    pub async fn prepare<T>(
+        &self,
+        email: &str,
+        sec: &str,
+        data: &T,
+        #[cfg(feature = "web3")] contract_address: &str,
+    ) -> HttpResponse
     where
         T: serde::Serialize,
     {
+        #[cfg(feature = "web3")]
+        let contract_address = contract_address.to_string();
+        #[cfg(not(feature = "web3"))]
+        let contract_address = "".to_string();
+
         let res = sqlx::query!(
-            "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id",
+            "INSERT INTO prepare (email, secret_component, data, contract_address) VALUES ($1, $2, $3, $4) RETURNING id",
             Self::hash(email),
             &sec,
             serde_json::to_value(data).expect("Could not serialize data"),
+            &contract_address,
         )
         .fetch_one(&self.pool)
         .await
@@ -131,7 +139,11 @@ impl BaseAuthenticator {
             .unwrap()
             .as_secs();
 
-        totp.check(otp, time)
+        if cfg!(feature = "development") {
+            true
+        } else {
+            totp.check(otp, time)
+        }
     }
 
     pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
@@ -160,12 +172,14 @@ impl BaseAuthenticator {
         email: &str,
         secret_component: &str,
         data: serde_json::Value,
+        contract_address: &str,
     ) -> Option<HttpResponse> {
-        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
+        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data, contract_address) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
                         Self::hash(email),
                         secret_component,
                         VerificationStatus::Verified as VerificationStatus,
-                        data
+                        data,
+                        contract_address
                     )
                     .execute(&self.pool)
                     .await
@@ -177,9 +191,12 @@ impl BaseAuthenticator {
                     })
     }
 
-    pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
+    pub async fn get_prepared(
+        &self,
+        email: &str,
+    ) -> Vec<(String, String, serde_json::Value, String)> {
         sqlx::query!(
-            "SELECT id, secret_component, data from prepare WHERE email=$1",
+            "SELECT id, secret_component, data, contract_address from prepare WHERE email=$1",
             Self::hash(email)
         )
         .fetch_all(&self.pool)
@@ -191,10 +208,18 @@ impl BaseAuthenticator {
                 rec.id as Option<Uuid>,
                 rec.secret_component.clone() as Option<String>,
                 rec.data.clone() as Option<serde_json::Value>,
+                rec.contract_address.clone() as Option<String>,
             )
         })
-        .filter(|(a, b, c)| a.and(b.as_ref()).and(c.as_ref()).is_some())
-        .map(|(id, sec, data)| (id.unwrap().to_string(), sec.unwrap(), data.unwrap()))
+        .filter(|(a, b, c, d)| a.and(b.as_ref()).and(c.as_ref()).and(d.as_ref()).is_some())
+        .map(|(id, sec, data, addr)| {
+            (
+                id.unwrap().to_string(),
+                sec.unwrap(),
+                data.unwrap(),
+                addr.unwrap(),
+            )
+        })
         .collect()
     }
 
@@ -231,23 +256,24 @@ impl Handlers {
 
     #[cfg(feature = "web3")]
     pub(crate) async fn web3_handler(
-        web3_config: Web3Config,
+        web3_config: &Web3Config,
         secret_component: Option<String>,
-        contract_address: String,
+        contract_address: &str,
+        destination_address: &str,
     ) -> Option<HttpResponse> {
         let Web3Config {
             account,
             websocket_key,
         } = web3_config;
 
-        let web3 = match Self::_build_web3_client(&websocket_key).await {
+        let web3 = match Self::_build_web3_client(websocket_key).await {
             Ok(web3) => web3,
             Err(e) => return Some(e),
         };
 
         let contract = web3::contract::Contract::from_json(
             web3.eth(),
-            web3::types::Address::from_str(&contract_address).unwrap(),
+            web3::types::Address::from_str(contract_address).expect("Invalid contract address"),
             include_bytes!("../../contract/abi.json"),
         );
 
@@ -262,10 +288,22 @@ impl Handlers {
 
         let res = contract
             .call(
-                "contribute",
-                (secret_component.unwrap_or_default(),),
-                account,
-                web3::contract::Options::default(),
+                "commit",
+                (
+                    web3::types::Bytes(
+                        secret_component
+                            .clone()
+                            .unwrap_or_default()
+                            .as_bytes()
+                            .to_vec(),
+                    ),
+                    web3::types::Address::from_str(destination_address).unwrap(),
+                ),
+                *account,
+                web3::contract::Options {
+                    gas: Some(6721975.into()),
+                    ..Default::default()
+                },
             )
             .await;
 
