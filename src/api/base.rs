@@ -311,7 +311,5 @@ impl Handlers {
             Ok(_) => None,
             Err(e) => Some(HttpResponseBuilder::new(StatusCode::BAD_REQUEST).json(e.to_string())),
         }
-
-        tracing::info!(ty = "web3", "Successful authentication");
     }
 }
