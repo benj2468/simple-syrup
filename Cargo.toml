@@ -38,7 +38,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 sqlx = {version = "0.5.10", features = [ "runtime-tokio-rustls", "postgres", "macros", "json", "offline", "uuid" ]}
 tokio = "1.15.0"
 tokio-core = "0.1.18"
-totp-rs = "0.7.3"
+totp-rs = "1.4.0"
 itertools = "0.10.3"
 actix-web-httpauth = "0.6.0"
 alcoholic_jwt = "1.0.1"
