@@ -10,6 +10,8 @@ email = []
 qa = []
 password = []
 biometric = []
+web3 = []
+development = []
 
 [build-dependencies]
 sqlx = "0.5.10"

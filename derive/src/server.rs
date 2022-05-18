@@ -130,19 +130,34 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
             match authenticator.verify_authentication(email, &request.data).await {
                 Some(err) => err,
                 None => {
-                    let res = sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;",
-                        BaseAuthenticator::hash(email),
-                        VerificationStatus::Verified as VerificationStatus,
-                        VerificationStatus::RequestAuth as VerificationStatus,
-                    )
+                    let res = if cfg!(feature = "development") {
+                        sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND (status=$3 OR status=$4) RETURNING secret_component;",
+                            BaseAuthenticator::hash(email),
+                            VerificationStatus::Verified as VerificationStatus,
+                            VerificationStatus::RequestAuth as VerificationStatus,
+                            VerificationStatus::Verified as VerificationStatus,
+                        )
                         .fetch_one(&authenticator.base.pool)
                         .await
-                        .map(|rec| rec.secret_component);
+                        .map(|rec| rec.secret_component)
+                    } else {
+                        sqlx::query!("UPDATE authenticated SET status=$2 WHERE email=$1 AND status=$3 RETURNING secret_component;",
+                            BaseAuthenticator::hash(email),
+                            VerificationStatus::Verified as VerificationStatus,
+                            VerificationStatus::RequestAuth as VerificationStatus,
+                        )
+                        .fetch_one(&authenticator.base.pool)
+                        .await
+                        .map(|rec| rec.secret_component)
+                    };
+
                     match res {
                         Ok(secret) => {
-                            authenticator.secret_handler(secret)
-                                .await
-                                .unwrap_or_else(|| actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).finish())
+                            match authenticator.secret_handler(secret, #[cfg(feature = "web3")] (&request.contract_address, &request.destination_address))
+                                .await {
+                                    Some(err) => err,
+                                    None => actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
+                                }
                         },
                         Err(e) => actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string())
                     }
@@ -238,7 +253,11 @@ pub(crate) fn derive_req(input: &DeriveData) -> TokenStream2 {
         #[derive(Debug, Deserialize, Serialize)]
         pub struct #verify_auth {
             email: String,
-            data: #base
+            data: #base,
+            #[cfg(feature = "web3")]
+            contract_address: String,
+            #[cfg(feature = "web3")]
+            destination_address: String,
         }
 
     }
