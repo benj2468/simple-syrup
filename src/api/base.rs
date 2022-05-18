@@ -65,15 +65,27 @@ impl BaseAuthenticator {
         hasher.finish().to_string()
     }
 
-    pub async fn prepare<T>(&self, email: &str, sec: &str, data: &T) -> HttpResponse
+    pub async fn prepare<T>(
+        &self,
+        email: &str,
+        sec: &str,
+        data: &T,
+        #[cfg(feature = "web3")] contract_address: &str,
+    ) -> HttpResponse
     where
         T: serde::Serialize,
     {
+        #[cfg(feature = "web3")]
+        let contract_address = contract_address.to_string();
+        #[cfg(not(feature = "web3"))]
+        let contract_address = "".to_string();
+
         let res = sqlx::query!(
-            "INSERT INTO prepare (email, secret_component, data) VALUES ($1, $2, $3) RETURNING id",
+            "INSERT INTO prepare (email, secret_component, data, contract_address) VALUES ($1, $2, $3, $4) RETURNING id",
             Self::hash(email),
             &sec,
             serde_json::to_value(data).expect("Could not serialize data"),
+            &contract_address,
         )
         .fetch_one(&self.pool)
         .await
@@ -160,12 +172,14 @@ impl BaseAuthenticator {
         email: &str,
         secret_component: &str,
         data: serde_json::Value,
+        contract_address: &str,
     ) -> Option<HttpResponse> {
-        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
+        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data, contract_address) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
                         Self::hash(email),
                         secret_component,
                         VerificationStatus::Verified as VerificationStatus,
-                        data
+                        data,
+                        contract_address
                     )
                     .execute(&self.pool)
                     .await
@@ -177,9 +191,12 @@ impl BaseAuthenticator {
                     })
     }
 
-    pub async fn get_prepared(&self, email: &str) -> Vec<(String, String, serde_json::Value)> {
+    pub async fn get_prepared(
+        &self,
+        email: &str,
+    ) -> Vec<(String, String, serde_json::Value, String)> {
         sqlx::query!(
-            "SELECT id, secret_component, data from prepare WHERE email=$1",
+            "SELECT id, secret_component, data, contract_address from prepare WHERE email=$1",
             Self::hash(email)
         )
         .fetch_all(&self.pool)
@@ -191,10 +208,18 @@ impl BaseAuthenticator {
                 rec.id as Option<Uuid>,
                 rec.secret_component.clone() as Option<String>,
                 rec.data.clone() as Option<serde_json::Value>,
+                rec.contract_address.clone() as Option<String>,
             )
         })
-        .filter(|(a, b, c)| a.and(b.as_ref()).and(c.as_ref()).is_some())
-        .map(|(id, sec, data)| (id.unwrap().to_string(), sec.unwrap(), data.unwrap()))
+        .filter(|(a, b, c, d)| a.and(b.as_ref()).and(c.as_ref()).and(d.as_ref()).is_some())
+        .map(|(id, sec, data, addr)| {
+            (
+                id.unwrap().to_string(),
+                sec.unwrap(),
+                data.unwrap(),
+                addr.unwrap(),
+            )
+        })
         .collect()
     }
 

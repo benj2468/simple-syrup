@@ -5,6 +5,7 @@ edition = "2018"
 build = "build.rs"
 
 [features]
+test = ["email", "qa", "password", "biometric"]
 default = []
 email = []
 qa = []
