@@ -45,7 +45,6 @@ impl AuthenticatorServer for EmailAuthenticator {
         secret_component: Option<String>,
         addresses: (&str, &str),
     ) -> Option<HttpResponse> {
-        println!(" In Secret Handler {:?}", secret_component);
         Handlers::web3_handler(
             &self.base.web3_config,
             secret_component,

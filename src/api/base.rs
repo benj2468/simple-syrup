@@ -249,6 +249,35 @@ impl Handlers {
         Ok(web3::Web3::new(ws))
     }
 
+    #[cfg(feature = "web3")]
+    fn _local_extract_abi(contract_address: &str) -> Result<String, std::io::Error> {
+        let versions =
+            std::fs::read_to_string("/Users/benjcape/curr-term/cs98/etherscan/cpass/versions")
+                .expect("Could not find Version file");
+
+        let version = versions
+            .split('\n')
+            .map(|row| row.split('|'))
+            .find_map(|mut row| (row.next() == Some(contract_address)).then(|| row.next()))
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Could not find Version".to_string(),
+                )
+            })?
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Could not find Version".to_string(),
+                )
+            })?;
+
+        std::fs::read_to_string(format!(
+            "/Users/benjcape/curr-term/cs98/etherscan/cpass/{}/abi.json",
+            version
+        ))
+    }
+
     pub(crate) async fn web2_handler(secret_component: Option<String>) -> Option<HttpResponse> {
         tracing::info!(ty = "web2", "Successful authentication");
         Some(HttpResponseBuilder::new(StatusCode::OK).json(secret_component))
@@ -271,10 +300,19 @@ impl Handlers {
             Err(e) => return Some(e),
         };
 
+        let abi = match Self::_local_extract_abi(contract_address) {
+            Ok(abi) => abi,
+            Err(e) => {
+                return Some(
+                    HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR).json(e.to_string()),
+                )
+            }
+        };
+
         let contract = web3::contract::Contract::from_json(
             web3.eth(),
             web3::types::Address::from_str(contract_address).expect("Invalid contract address"),
-            include_bytes!("../../contract/abi.json"),
+            abi.as_bytes(),
         );
 
         if contract.is_err() {
