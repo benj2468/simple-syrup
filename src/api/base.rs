@@ -174,7 +174,7 @@ impl BaseAuthenticator {
         data: serde_json::Value,
         contract_address: &str,
     ) -> Option<HttpResponse> {
-        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data, contract_address) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data;",
+        sqlx::query!("INSERT INTO authenticated (email, secret_component, status, data, contract_address) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET secret_component = EXCLUDED.secret_component, data = EXCLUDED.data, contract_address = EXCLUDED.contract_address;",
                         Self::hash(email),
                         secret_component,
                         VerificationStatus::Verified as VerificationStatus,
@@ -308,6 +308,8 @@ impl Handlers {
                 )
             }
         };
+
+        println!("Trying to call contract: {:?}", contract_address);
 
         let contract = web3::contract::Contract::from_json(
             web3.eth(),

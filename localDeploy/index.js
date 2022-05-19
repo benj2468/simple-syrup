@@ -2,7 +2,7 @@ const {exec} = require('child_process');
 const {local} = require('../config');
 const Web3 = require('web3')
 
-const getHost = (i) => `http://localhost:${getPort(i)}`
+const getHost = (i) => `http://127.0.0.1:${getPort(i)}`
 const getPort = (i) => 8080 + i
 const dbName = (name) => `cpass${name}`
 
@@ -40,7 +40,7 @@ const main = async () => {
         const HOST = "http://127.0.0.1"
         const PORT = getPort(i)
 
-        const DATABASE_URL = `postgres://localhost:5432/${dbName(name)}`
+        const DATABASE_URL = `postgres://127.0.0.1:5432/${dbName(name)}`
 
         const cmd = `cargo run --features ${ty.toLowerCase()} --features web3`
         
@@ -53,7 +53,7 @@ const main = async () => {
                 DATABASE_URL,
                 HOST,
                 PORT,
-                BIOMETRIC_API_URL: 'http://localhost:8000',
+                BIOMETRIC_API_URL: 'http://127.0.0.1:8000',
                 ACTIVE_SERVERS: JSON.stringify(ACTIVE_SERVERS)
             }
         }, (err, stdout, stderr) => {
