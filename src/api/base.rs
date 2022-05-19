@@ -155,7 +155,7 @@ impl BaseAuthenticator {
 
         let otp = totp.generate(time);
 
-        if cfg!(test) {
+        if cfg!(test) || cfg!(feature = "development") {
             Some(actix_web::HttpResponseBuilder::new(StatusCode::OK).json(otp))
         } else {
             self.send_email(email, &otp)
