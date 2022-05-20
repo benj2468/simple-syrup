@@ -5,6 +5,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use super::ServerData;
+use super::base::Handlers;
 use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
 use actix_web::HttpResponse;
 use hyper::StatusCode;
@@ -46,7 +47,7 @@ impl AuthenticatorServer for PasswordAuthenticator {
         let data = serde_json::to_value(hasher.finish()).unwrap();
 
         sqlx::query!(
-            "UPDATE authenticated SET status=$3 WHERE email=$1 AND (status=$2 OR status=$3) AND data = $4 RETURNING id;",
+            "UPDATE authenticated SET status=$3 WHERE email = $1 AND (status=$2 OR status=$3) AND data = $4 RETURNING id;",
             BaseAuthenticator::hash(email),
             VerificationStatus::Verified as VerificationStatus,
             VerificationStatus::RequestAuth as VerificationStatus,
@@ -59,6 +60,21 @@ impl AuthenticatorServer for PasswordAuthenticator {
                 .json(e.to_string()),
         )
         .err()
+    }
+
+    #[cfg(feature = "web3")]
+    async fn secret_handler(
+        &self,
+        secret_component: Option<String>,
+        addresses: (&str, &str),
+    ) -> Option<HttpResponse> {
+        Handlers::web3_handler(
+            &self.base.web3_config,
+            secret_component,
+            addresses.0,
+            addresses.1,
+        )
+        .await
     }
 }
 

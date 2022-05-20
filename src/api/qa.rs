@@ -5,7 +5,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use super::ServerData;
-use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
+use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus, Handlers};
 use actix_web::HttpResponse;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -59,6 +59,21 @@ impl AuthenticatorServer for QAAuthenticator {
                 .json(e.to_string()),
         )
         .err()
+    }
+
+    #[cfg(feature = "web3")]
+    async fn secret_handler(
+        &self,
+        secret_component: Option<String>,
+        addresses: (&str, &str),
+    ) -> Option<HttpResponse> {
+        Handlers::web3_handler(
+            &self.base.web3_config,
+            secret_component,
+            addresses.0,
+            addresses.1,
+        )
+        .await
     }
 }
 

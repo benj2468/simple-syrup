@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use derive::*;
 use sqlx::PgPool;
 
-use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus};
+use super::{base::BaseAuthenticator, AuthenticatorServer, VerificationStatus, Handlers};
 use actix_web::{HttpResponse};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -98,6 +98,21 @@ impl AuthenticatorServer for BiometricAuthenticator {
                 .json(e.to_string()),
         )
         .err()
+    }
+
+    #[cfg(feature = "web3")]
+    async fn secret_handler(
+        &self,
+        secret_component: Option<String>,
+        addresses: (&str, &str),
+    ) -> Option<HttpResponse> {
+        Handlers::web3_handler(
+            &self.base.web3_config,
+            secret_component,
+            addresses.0,
+            addresses.1,
+        )
+        .await
     }
 }
 
