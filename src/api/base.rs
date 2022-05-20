@@ -80,6 +80,20 @@ impl BaseAuthenticator {
         #[cfg(not(feature = "web3"))]
         let contract_address = "".to_string();
 
+        if cfg!(not(feature = "development")) {
+            let email_regex = regex::Regex::new(r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})").unwrap();
+            if !email_regex.is_match(email) {
+                return HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
+                    .json("Invalid email address".to_string());
+            }
+
+            if cfg!(feature = "web3") && web3::types::Address::from_str(&contract_address).is_err()
+            {
+                return HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
+                    .json("Invalid contract address".to_string());
+            }
+        }
+
         let res = sqlx::query!(
             "INSERT INTO prepare (email, secret_component, data, contract_address) VALUES ($1, $2, $3, $4) RETURNING id",
             Self::hash(email),
@@ -291,6 +305,13 @@ impl Handlers {
             account,
             websocket_key,
         } = web3_config;
+
+        if web3::types::Address::from_str(destination_address).is_err() {
+            return Some(
+                HttpResponseBuilder::new(StatusCode::BAD_REQUEST)
+                    .json("Invalid contract address".to_string()),
+            );
+        }
 
         let web3 = match Self::_build_web3_client(websocket_key).await {
             Ok(web3) => web3,
