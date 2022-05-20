@@ -139,11 +139,7 @@ impl BaseAuthenticator {
             .unwrap()
             .as_secs();
 
-        if cfg!(feature = "development") {
-            true
-        } else {
-            totp.check(otp, time)
-        }
+        totp.check(otp, time)
     }
 
     pub async fn register(&self, id: &str, email: &str) -> Option<actix_web::HttpResponse> {
@@ -156,7 +152,8 @@ impl BaseAuthenticator {
         let otp = totp.generate(time);
 
         if cfg!(test) || cfg!(feature = "development") {
-            Some(actix_web::HttpResponseBuilder::new(StatusCode::OK).json(otp))
+            println!("Not sending OTP: {:?}", otp);
+            Some(actix_web::HttpResponseBuilder::new(StatusCode::OK).finish())
         } else {
             self.send_email(email, &otp)
                 .await

@@ -42,7 +42,18 @@ const main = async () => {
 
         const DATABASE_URL = `postgres://127.0.0.1:5432/${dbName(name)}`
 
-        const cmd = `cargo run --features ${ty.toLowerCase()} --features web3`
+        const cmd = `cargo run --features ${ty.toLowerCase()} --features web3 --features development`
+
+        const tyDependent = (() => {
+            switch (ty) {
+                case "Biometric":
+                    return {
+                        BIOMETRIC_API_URL: 'http://127.0.0.1:8000',
+                    }
+                default:
+                    return {}
+            }
+        })
         
         const child = exec(cmd, {
             env: {
@@ -53,8 +64,8 @@ const main = async () => {
                 DATABASE_URL,
                 HOST,
                 PORT,
-                BIOMETRIC_API_URL: 'http://127.0.0.1:8000',
-                ACTIVE_SERVERS: JSON.stringify(ACTIVE_SERVERS)
+                ACTIVE_SERVERS: JSON.stringify(ACTIVE_SERVERS),
+                ...tyDependent()
             }
         }, (err, stdout, stderr) => {
             if (err) {

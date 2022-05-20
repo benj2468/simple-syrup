@@ -123,8 +123,6 @@ impl TestApp {
             }))
             .to_request();
 
-        println!("{:?}", req);
-
         test::call_and_read_body_json(&app, req).await
     }
 }
