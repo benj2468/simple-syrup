@@ -100,20 +100,6 @@ impl AuthenticatorServer for BiometricAuthenticator {
         .err()
     }
 
-    #[cfg(feature = "web3")]
-    async fn secret_handler(
-        &self,
-        secret_component: Option<String>,
-        addresses: (&str, &str),
-    ) -> Option<HttpResponse> {
-        Handlers::web3_handler(
-            &self.base.web3_config,
-            secret_component,
-            addresses.0,
-            addresses.1,
-        )
-        .await
-    }
 }
 
 pub fn server_builder(pool: PgPool) -> BiometricAuthenticator {

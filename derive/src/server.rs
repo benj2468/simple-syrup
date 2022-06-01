@@ -159,11 +159,25 @@ pub(crate) fn derive_verify_authentication(input: &DeriveData) -> TokenStream2 {
                                 || (None, Default::default()),
                                 |c| (Some(c.0), c.1)
                             );
-                            match authenticator.secret_handler(secret, #[cfg(feature = "web3")] (&contract_address, &request.destination_address))
-                                .await {
-                                    Some(err) => err,
+
+                            #[cfg(not(feature = "web3"))]
+                            match Handlers::web2_handler(secret).await {
+                                Some(err) => err,
+                                None => actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
+                            }
+
+                            #[cfg(feature = "web3")]
+                            if (request.useWeb3) {
+                                match Handlers::web3_handler(&authenticator.base.web3_config, secret, &contract_address, &request.destination_address).await {
+                                    Some(res) => res,
                                     None => actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
                                 }
+                            } else {
+                                match Handlers::web2_handler(secret).await {
+                                    Some(res) => res,
+                                    None => actix_web::HttpResponseBuilder::new(StatusCode::OK).finish()
+                                }
+                            }
                         },
                         Err(e) => actix_web::HttpResponseBuilder::new(StatusCode::UNAUTHORIZED).json(e.to_string())
                     }
@@ -260,12 +274,15 @@ pub(crate) fn derive_req(input: &DeriveData) -> TokenStream2 {
         }
 
 
+
         #[derive(Debug, Deserialize, Serialize)]
         pub struct #verify_auth {
             email: String,
             data: #base,
             #[cfg(feature = "web3")]
             destination_address: String,
+            #[cfg(feature = "web3")]
+            useWeb3: bool,
         }
 
     }
